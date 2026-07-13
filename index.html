@@ -4989,13 +4989,8 @@
                             await switchTab('panel-transporter-portal', transportToken);
                         } catch (transportLinkErr) {
                             console.error('[Transport Link] Error loading transporter portal from token link:', transportLinkErr);
+                            // Keep auth overlay hidden — never redirect transporter to sign-in page
                             document.getElementById('auth-overlay').style.display = 'none';
-                            const panelTP = document.getElementById('panel-transporter-portal');
-                            if (panelTP) {
-                                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                                panelTP.classList.add('active');
-                                panelTP.innerHTML = `<div class="text-center py-5 px-4"><div class="mb-3" style="font-size:3rem; color:#dc2626;"><i class="fa-solid fa-circle-xmark"></i></div><h5 class="fw-bold text-dark mb-2">Portal Load Error</h5><p class="text-secondary fs-8 mb-4">Something went wrong while loading this transport portal. Please try refreshing the page or contact the administrator.</p></div>`;
-                            }
                         }
                     } else if (urlToken) {
                         // Set external vendor context for passwordless token-based access
@@ -5017,18 +5012,8 @@
                             await switchTab('panel-vendor-portal', urlToken);
                         } catch (vendorLinkErr) {
                             console.error('[Vendor Link] Error loading vendor portal from token link:', vendorLinkErr);
-                            // Keep the auth overlay hidden; show error inside the portal panel
+                            // Keep auth overlay hidden — never redirect vendor to sign-in page
                             document.getElementById('auth-overlay').style.display = 'none';
-                            const loaderCard = document.getElementById('vendor-portal-loading-card');
-                            if (loaderCard) {
-                                loaderCard.classList.remove('d-none');
-                                loaderCard.innerHTML = `<div class="text-center py-5 px-4"><div class="mb-3" style="font-size:3rem; color:#dc2626;"><i class="fa-solid fa-circle-xmark"></i></div><h5 class="fw-bold text-dark mb-2">Portal Load Error</h5><p class="text-secondary fs-8 mb-4">Something went wrong while loading this RFQ portal. Please try refreshing the page or contact the administrator.</p></div>`;
-                            }
-                            const panelVP = document.getElementById('panel-vendor-portal');
-                            if (panelVP) {
-                                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                                panelVP.classList.add('active');
-                            }
                         }
                     } else if (registerParam) {
                         // Force session logout to prevent conflicts
