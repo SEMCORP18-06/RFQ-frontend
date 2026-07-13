@@ -8031,6 +8031,7 @@
             bootstrap.Modal.getInstance(document.getElementById('addVendorModal')).hide();
             document.getElementById('add-vendor-form').reset();
             refreshVendorsTable();
+            if (typeof refreshMasterListTab === 'function') refreshMasterListTab('vendor');
         });
 
         // Edit Vendor script handlers
@@ -8141,6 +8142,7 @@
             triggerInAppAlert('Vendor Updated', `Vendor ${body.name} details updated.`);
             bootstrap.Modal.getInstance(document.getElementById('editVendorModal')).hide();
             refreshVendorsTable();
+            if (typeof refreshMasterListTab === 'function') refreshMasterListTab('vendor');
         });
 
         // Delete Vendor
@@ -8236,6 +8238,7 @@
                     triggerInAppAlert(alertTitle, alertMsg);
                     alert(isArchived ? 'Vendor has been permanently deleted' : 'Vendor has been archived');
                     refreshVendorsTable();
+                    if (typeof refreshMasterListTab === 'function') refreshMasterListTab('vendor');
                 }
             );
         }
@@ -8294,6 +8297,7 @@
                     triggerInAppAlert('Vendor Recovered', `Vendor "${vendorName}" has been successfully recovered.`);
                     alert('Vendor has been recovered');
                     refreshVendorsTable();
+                    if (typeof refreshMasterListTab === 'function') refreshMasterListTab('vendor');
                 }
             );
         }
@@ -12355,6 +12359,7 @@
                 bootstrap.Modal.getInstance(document.getElementById('addTransporterModal')).hide();
                 document.getElementById('add-transporter-form').reset();
                 await refreshTransportersView();
+                if (typeof refreshMasterListTab === 'function') refreshMasterListTab('transporter');
             } catch (err) {
                 console.error("Error creating transporter:", err);
                 alert("Failed to add transporter: " + err.message);
@@ -12430,6 +12435,7 @@
                 showCustomAlert('Transporter Updated', `Details for ${body.name} successfully saved.`);
                 bootstrap.Modal.getInstance(document.getElementById('editTransporterModal')).hide();
                 await refreshTransportersView();
+                if (typeof refreshMasterListTab === 'function') refreshMasterListTab('transporter');
             } catch (err) {
                 console.error("Error editing transporter:", err);
                 alert("Failed to update transporter: " + err.message);
@@ -12520,6 +12526,7 @@
                         triggerInAppAlert(alertTitle, alertMsg);
                         alert(isArchived ? 'Transporter has been permanently deleted' : 'Transporter has been archived');
                         await refreshTransportersView();
+                        if (typeof refreshMasterListTab === 'function') refreshMasterListTab('transporter');
                     } catch (err) {
                         console.error("Error deleting transporter:", err);
                         alert("Failed to delete transporter: " + err.message);
@@ -12580,6 +12587,7 @@
                         triggerInAppAlert('Transporter Recovered', `Transporter "${transporterName}" has been successfully recovered.`);
                         alert('Transporter has been recovered');
                         await refreshTransportersView();
+                        if (typeof refreshMasterListTab === 'function') refreshMasterListTab('transporter');
                     } catch (err) {
                         console.error("Error recovering transporter:", err);
                         alert("Failed to recover transporter: " + err.message);
