@@ -24,7 +24,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEMCO Smart RFQ AI Agent - Enterprise Procurement Platform</title>
+    <title>SEMCO Smart RFQ - Enterprise Procurement Platform</title>
     
     <!-- External CSS & Libraries via CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -1573,9 +1573,6 @@
             <li class="sidebar-nav-item" data-target="panel-transporters">
                 <a href="#"><i class="fa-solid fa-truck"></i> Transporter Master</a>
             </li>
-            <li class="sidebar-nav-item" data-target="panel-copilot">
-                <a href="#"><i class="fa-solid fa-robot"></i> AI Copilot</a>
-            </li>
             <li class="sidebar-nav-item" data-target="panel-audit">
                 <a href="#"><i class="fa-solid fa-shield-halved"></i> Audit Trail</a>
             </li>
@@ -2245,35 +2242,7 @@
                 </div>
             </section>
 
-            <!-- PANEL 6: AI PROCUREMENT COPILOT -->
-            <section id="panel-copilot" class="tab-panel">
-                <div class="dashboard-card max-w-4xl mx-auto">
-                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="bg-primary p-2 rounded-circle"><i class="fa-solid fa-robot text-primary"></i></div>
-                            <div>
-                                <h6 class="fw-bold m-0">SEMCO AI Procurement Copilot</h6>
-                                <span class="fs-8 text-secondary">Embedded Procurement Intelligence Agent</span>
-                            </div>
-                        </div>
-                        <span class="status-badge badge-submitted fs-9"><i class="fa-solid fa-bolt me-1"></i> NLP Engine Active</span>
-                    </div>
 
-                    <div class="chat-container mb-3" id="copilot-chat-container">
-                        <div class="chat-message bot">
-                            <div class="chat-bubble">
-                                Hello! I am your AI Procurement Copilot. Ask me questions about quotations, L1 vendors, price trends, response times, or negotiation suggestions.
-                            </div>
-                            <div class="chat-meta">Copilot • Just now</div>
-                        </div>
-                    </div>
-
-                    <form id="copilot-query-form" class="d-flex gap-2">
-                        <input type="text" class="form-control" id="copilot-query-input" placeholder="Type query, e.g., 'Who responded fastest?' or 'Show vendors 10% below average'..." required>
-                        <button type="submit" class="btn btn-primary" id="copilot-send-btn"><i class="fa-solid fa-paper-plane me-1"></i> Send</button>
-                    </form>
-                </div>
-            </section>
 
             <!-- PANEL: PARTNER ONBOARDING REGISTRATION FORM -->
             <section id="panel-onboarding-registration" class="tab-panel">
@@ -5829,9 +5798,6 @@
                     </li>
                     <li class="sidebar-nav-item" data-target="panel-master-list">
                         <a href="#"><i class="fa-solid fa-rectangle-list"></i> Master List</a>
-                    </li>
-                    <li class="sidebar-nav-item" data-target="panel-copilot">
-                        <a href="#"><i class="fa-solid fa-robot"></i> AI Copilot</a>
                     </li>
                     <li class="sidebar-nav-item" data-target="panel-audit">
                         <a href="#"><i class="fa-solid fa-shield-halved"></i> Audit Trail</a>
@@ -11516,104 +11482,7 @@
             document.body.removeChild(link);
         }
 
-        async function triggerAICopilotAnalysis() {
-            const selectEl = document.getElementById('comparative-rfq-select');
-            const selectedVal = selectEl ? selectEl.value : "";
-            const rfqIds = selectedVal ? [selectedVal] : [];
-            if (rfqIds.length === 0) {
-                alert("Please select an RFQ to generate AI recommendations.");
-                return;
-            }
 
-            // Aggregate reports
-            let report = "=== AI PROCURE INTELLIGENCE MULTI-RFQ REPORT ===\n\n";
-            for (const rfqId of rfqIds) {
-                const details = await getRFQDetails(rfqId);
-                const comp = await getRFQComparativeData(rfqId);
-                if (comp && comp.rankings && comp.rankings.length > 0) {
-                    report += `RFQ: ${details.rfq.rfq_number} (${details.rfq.project_name})\n`;
-                    report += `  L1 Vendor: ${comp.winner.vendor} (Quote: ₹${parseFloat(comp.winner.value).toLocaleString('en-IN')})\n`;
-                    report += `  Estimated Savings: ₹${parseFloat(comp.winner.savings).toLocaleString('en-IN')} (${comp.winner.advantage} vs average)\n`;
-                    report += `  Lead Time: ${comp.rankings[0].lead_time} days\n\n`;
-                }
-            }
-
-            alert(report + "Action: Recommendations loaded in the AI Procurement Intelligence Recommendations panel below.");
-            addAuditLog(currentUser, 'AI_RECOMMENDATION_GENERATE', `AI Commercial analysis report generated for selected RFQs: ${rfqIds.join(', ')}`);
-        }
-
-        // ========== AI COPILOT CHAT (MODULE 15) ==========
-        document.getElementById('copilot-query-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const input = document.getElementById('copilot-query-input');
-            const query = input.value.trim();
-            if (!query) return;
-
-            const container = document.getElementById('copilot-chat-container');
-            
-            // Append User message
-            const userMsg = document.createElement('div');
-            userMsg.className = 'chat-message user';
-            userMsg.innerHTML = `
-                <div class="chat-bubble">${query}</div>
-                <div class="chat-meta">You • Just now</div>
-            `;
-            container.appendChild(userMsg);
-            container.scrollTop = container.scrollHeight;
-            input.value = '';
-
-            // Loading bubble
-            const loadingMsg = document.createElement('div');
-            loadingMsg.className = 'chat-message bot';
-            loadingMsg.innerHTML = `
-                <div class="chat-bubble text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i> Thinking...</div>
-            `;
-            container.appendChild(loadingMsg);
-            container.scrollTop = container.scrollHeight;
-
-            let reply = "";
-
-            try {
-                if (serverMode) {
-                    const res = await fetch(`${API_URL}/copilot/query`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query })
-                    });
-                    const json = await res.json();
-                    reply = json.reply;
-                } else {
-                    // Offline Simulated NLP logic
-                    const normalized = query.toLowerCase();
-                    if (normalized.includes('fastest') || normalized.includes('lead time')) {
-                        reply = "According to current submissions, **Sandvik Coromant India** responded fastest, offering an average lead time of **7 days**.";
-                    } else if (normalized.includes('below average') || normalized.includes('10%')) {
-                        reply = "Analyzing current submitted rates against historical data:\n\n1. **Tata Steel Ltd.** SS316 Tubing is quoted at **₹810/Mtr** which is **12.5% below** the current average rate (₹925).\n2. **JSW Steel Ltd.** is also offering steel components at highly competitive margins.";
-                    } else if (normalized.includes('won most')) {
-                        reply = "Our records show **Tata Steel Ltd.** has won **45%** of all piping RFQs issued this year, followed by **Kirloskar Brothers** at **30%**.";
-                    } else {
-                        reply = `Hello! I am your AI Procurement Copilot. Ask me specific questions like:
-                                \n* "Who responded fastest to current piping RFQs?"
-                                \n* "Which vendor won most RFQs this year?"
-                                \n* "Show vendors offering rates 10% below average price"`;
-                    }
-                }
-            } catch (err) {
-                reply = `Error connecting to Copilot engine: ${err.message}`;
-            }
-
-            // Remove loading and append Bot message
-            loadingMsg.remove();
-            const botMsg = document.createElement('div');
-            botMsg.className = 'chat-message bot';
-            botMsg.innerHTML = `
-                <div class="chat-bubble">${reply.replace(/\n/g, '<br>')}</div>
-                <div class="chat-meta">Copilot • Just now</div>
-            `;
-            container.appendChild(botMsg);
-            container.scrollTop = container.scrollHeight;
-            addAuditLog('AI Copilot', 'COPILET_QUERY', `Processed natural language query: "${query}"`);
-        });
 
         // ========== CHARTS RENDER FUNCTIONS (MODULE 10) ==========
         let chartInstancePrice = null;
