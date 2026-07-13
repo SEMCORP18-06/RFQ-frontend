@@ -7273,9 +7273,9 @@
             }
 
             const filtered = vendors.filter(v => 
-                v.name.toLowerCase().includes(searchVal) || 
+                (v.name || '').toLowerCase().includes(searchVal) || 
                 (v.category && v.category.toLowerCase().includes(searchVal)) || 
-                v.id.toLowerCase().includes(searchVal)
+                (v.id || '').toLowerCase().includes(searchVal)
             );
 
             if (filtered.length === 0) {
@@ -8529,8 +8529,8 @@
                             const category = String(row.product_category || row.category || row['Product Category'] || row.Category || 'Raw Materials (Pipes/Sheets)').trim();
                             
                             const existing = allVendors.find(v => 
-                                v.name.toLowerCase() === name.toLowerCase() || 
-                                (email && v.email && v.email.toLowerCase() === email.toLowerCase())
+                                (v.name || '').toLowerCase() === name.toLowerCase() || 
+                                (email && v.email && (v.email || '').toLowerCase() === email.toLowerCase())
                             );
                             
                             if (existing) {
