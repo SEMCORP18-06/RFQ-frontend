@@ -2006,6 +2006,7 @@
                                         <div class="input-group">
                                             <input type="file" class="form-control" id="rfq-excel-file" accept=".xlsx, .xls, .csv" onchange="simulateRFQExcelImport(event)">
                                         </div>
+                                        <div id="rfq-excel-attached-indicator" class="mt-1 d-none text-success fw-semibold" style="font-size:0.75rem;"><i class="fa-solid fa-circle-check me-1"></i>Attached: <span id="rfq-excel-attached-name"></span></div>
                                         <div class="form-text fs-8 text-primary cursor-pointer" onclick="downloadRFQTemplate()"><i class="fa-solid fa-download me-1"></i> Download items template Excel</div>
                                         <div class="form-check mt-2">
                                             <input class="form-check-input" type="checkbox" id="rfq-allow-spec-sheet">
@@ -4076,6 +4077,8 @@
         let currentToken = null;
         let currentVendorId = null;
         let currentTransporterId = null;
+        let currentEditingRfqExcelFilename = "";
+        let currentEditingRfqExcelPath = "";
         let vendorPortalTimerInterval = null;
 
         // Custom Alert popup system
@@ -8598,6 +8601,17 @@
             document.getElementById('rfq-form-number').value = `RFQ-2026-${String(count + 1).padStart(3, '0')}`;
             document.getElementById('rfq-items-tbody').innerHTML = '';
             
+            // Reset Excel variables and UI indicators
+            currentEditingRfqExcelFilename = "";
+            currentEditingRfqExcelPath = "";
+            const fileInput = document.getElementById('rfq-excel-file');
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput._lastUploadedFile = null;
+            }
+            const indicator = document.getElementById('rfq-excel-attached-indicator');
+            if (indicator) indicator.classList.add('d-none');
+            
             // Restore standard headers
             const table = document.getElementById('rfq-items-table');
             if (table) {
@@ -8800,6 +8814,15 @@
             // Store reference for upload after save
             event.target._lastUploadedFile = file;
 
+            currentEditingRfqExcelFilename = file.name;
+            currentEditingRfqExcelPath = ""; // reset path since it's a new upload
+            const indicator = document.getElementById('rfq-excel-attached-indicator');
+            const nameSpan = document.getElementById('rfq-excel-attached-name');
+            if (indicator && nameSpan) {
+                nameSpan.textContent = file.name;
+                indicator.classList.remove('d-none');
+            }
+
             // Get Base64 of the file for offline preview download
             const b64Reader = new FileReader();
             b64Reader.onload = function(e) {
@@ -8955,7 +8978,9 @@
                 items,
                 vendor_ids: selectedVendors,
                 custom_headers: customHeadersVal || JSON.stringify(["MOC", "Description", "Make", "Size", "Quantity", "Unit"]),
-                allow_spec_sheet: document.getElementById('rfq-allow-spec-sheet')?.checked ? 1 : 0
+                allow_spec_sheet: document.getElementById('rfq-allow-spec-sheet')?.checked ? 1 : 0,
+                excel_filename: currentEditingRfqExcelFilename,
+                excel_path: currentEditingRfqExcelPath
             };
 
             let rfqId;
@@ -9140,7 +9165,9 @@
                 items,
                 vendor_ids: selectedVendors,
                 custom_headers: customHeadersVal || JSON.stringify(["MOC", "Description", "Make", "Size", "Quantity", "Unit"]),
-                allow_spec_sheet: document.getElementById('rfq-allow-spec-sheet')?.checked ? 1 : 0
+                allow_spec_sheet: document.getElementById('rfq-allow-spec-sheet')?.checked ? 1 : 0,
+                excel_filename: currentEditingRfqExcelFilename,
+                excel_path: currentEditingRfqExcelPath
             };
 
             let rfqId;
@@ -9677,8 +9704,34 @@
             document.getElementById('rfq-form-delivery-date').value = details.rfq.delivery_date;
             document.getElementById('rfq-form-dept').value = details.rfq.department || 'Procurement';
             document.getElementById('rfq-form-buyer').value = details.rfq.buyer_name;
+            
+            // Set allow_spec_sheet checkbox checked status
+            const allowCheckbox = document.getElementById('rfq-allow-spec-sheet');
+            if (allowCheckbox) {
+                allowCheckbox.checked = details.rfq.allow_spec_sheet === 1;
+            }
 
-            // Load items
+            // Save filename and path globally for updates
+            currentEditingRfqExcelFilename = details.rfq.excel_filename || "";
+            currentEditingRfqExcelPath = details.rfq.excel_path || "";
+            
+            // Populate attached file indicator in form
+            const indicator = document.getElementById('rfq-excel-attached-indicator');
+            const nameSpan = document.getElementById('rfq-excel-attached-name');
+            if (details.rfq.excel_filename && indicator && nameSpan) {
+                nameSpan.textContent = details.rfq.excel_filename;
+                indicator.classList.remove('d-none');
+            } else if (indicator) {
+                indicator.classList.add('d-none');
+            }
+
+            // Clear file upload input
+            const fileInput = document.getElementById('rfq-excel-file');
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput._lastUploadedFile = null;
+            }
+
             const tbody = document.getElementById('rfq-items-tbody');
             tbody.innerHTML = '';
             
