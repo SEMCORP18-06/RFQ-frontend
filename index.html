@@ -10110,12 +10110,12 @@
             const lockIndicator = document.getElementById('vendor-portal-lock-indicator');
             const actionsDiv = document.getElementById('vendor-portal-actions');
 
-            const isLocked = isSubmitted || isExpired;
+            const isLocked = isSubmitted || isExpired || details.rfq.status === 'Closed' || details.rfq.status === 'Expired';
             finalCostInput.readOnly = isLocked;
             if (ptInput) ptInput.readOnly = isLocked;
 
             if (isLocked) {
-                lockIndicator.innerHTML = isExpired 
+                lockIndicator.innerHTML = (isExpired || details.rfq.status === 'Closed' || details.rfq.status === 'Expired') 
                     ? '<span class="status-badge badge-closed"><i class="fa-solid fa-hourglass-end me-1"></i> Submission Closed</span>'
                     : '<span class="status-badge badge-submitted"><i class="fa-solid fa-lock me-1"></i> Submission Locked</span>';
                 actionsDiv.classList.add('d-none');
@@ -13855,19 +13855,27 @@
                     const transporters = JSON.parse(localStorage.getItem('semco_transporters')) || [];
                     const transporter = transporters.find(t => t.id === dist.transporter_id);
 
-                    if (req.status === 'Expired' || (req.expires_at && new Date() > new Date(req.expires_at))) {
+                    if (req.status === 'Expired' || req.status === 'Closed' || (req.expires_at && new Date() > new Date(req.expires_at))) {
                         if (dist.status !== 'Submitted' && dist.status !== 'Expired') {
                             dist.status = 'Expired';
                             localStorage.setItem('semco_transport_distributions', JSON.stringify(distsDb));
 
-                            req.status = 'Expired';
-                            localStorage.setItem('semco_transport_requests', JSON.stringify(requests));
+                            if (req.status !== 'Closed') {
+                                req.status = 'Expired';
+                                localStorage.setItem('semco_transport_requests', JSON.stringify(requests));
+                            }
                         }
-                        if (loadingCard) loadingCard.classList.add('d-none');
-                        mainCard.style.display = 'none';
-                        errorCard.style.display = 'block';
-                        if (errorMsg) errorMsg.textContent = 'This bid request window has expired. Quotes are no longer accepted.';
-                        return;
+                        if (dist.status !== 'Submitted') {
+                            if (loadingCard) loadingCard.classList.add('d-none');
+                            mainCard.style.display = 'none';
+                            errorCard.style.display = 'block';
+                            if (errorMsg) {
+                                errorMsg.textContent = req.status === 'Closed'
+                                    ? 'This transport request has been closed manually by the administrator.'
+                                    : 'This bid request window has expired. Quotes are no longer accepted.';
+                            }
+                            return;
+                        }
                     }
 
                     if (dist.status === 'Sent') {
