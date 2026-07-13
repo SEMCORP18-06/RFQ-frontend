@@ -9908,6 +9908,17 @@
                     return;
                 }
 
+                const rfqDetails = await getRFQDetails(dist.rfq_id);
+                const rfqObj = rfqDetails.rfq;
+                const isRfqExpired = rfqObj.available_to && new Date() > new Date(rfqObj.available_to);
+
+                if (dist.status !== 'Submitted' && (rfqObj.status === 'Closed' || rfqObj.status === 'Expired' || isRfqExpired)) {
+                    showPortalError(rfqObj.status === 'Closed'
+                        ? 'This RFQ has been closed manually by the administrator.'
+                        : 'This RFQ bidding window has expired. Quotes are no longer accepted.');
+                    return;
+                }
+
                 // Track opened
                 if (dist.status === 'Sent') {
                     dist.status = 'Opened';
@@ -9916,7 +9927,6 @@
                     addAuditLog('Vendor Portal', 'RFQ_OPENED', `Vendor opened link for RFQ id ${dist.rfq_id}`);
                 }
 
-                const rfqDetails = await getRFQDetails(dist.rfq_id);
                 const quotes = JSON.parse(localStorage.getItem('semco_quotes')).filter(q => q.rfq_id === dist.rfq_id && q.vendor_id === dist.vendor_id);
                 
                 // Map quotes rate
