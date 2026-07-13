@@ -6,28 +6,20 @@
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
 
-            // Bypasses the flash of auth overlay for passwordless token accesses or active sessions
+            // Hide portal loader immediately if a token or active session is detected
+            // (auth-overlay is already hidden by default in CSS; only shown explicitly when needed)
             const urlParams = new URLSearchParams(window.location.search);
-            const hasToken = urlParams.has('token') || urlParams.has('transport_token');
+            const hasToken = urlParams.has('token') || urlParams.has('transport_token') || urlParams.has('onboard_token');
             const hasSession = localStorage.getItem('semco_session_token') && localStorage.getItem('semco_session_user');
-            const isRegister = urlParams.get('register') === 'true';
 
-            if ((hasToken || hasSession) && !isRegister) {
-                const style = document.createElement('style');
-                style.id = 'temp-hide-auth';
-                style.innerHTML = `
-                    #auth-overlay { display: none !important; }
-                    #vendor-portal-placeholder-card { display: none !important; }
-                    #vendor-portal-simulation-warning-card { display: none !important; }
-                    #vendor-portal-loading-card { display: block !important; }
-                `;
-                document.head.appendChild(style);
-            } else {
+            if (!hasToken && !hasSession) {
+                // No token and no session: hide the loading spinner, auth will be shown by JS
                 const style = document.createElement('style');
                 style.id = 'temp-hide-loader';
                 style.innerHTML = '#portal-loader { display: none !important; }';
                 document.head.appendChild(style);
             }
+            // If there IS a token or session, keep the portal-loader visible until startup completes
         })();
     </script>
     <meta charset="UTF-8">
@@ -911,7 +903,7 @@
             height: 100vh;
             background: radial-gradient(circle at 10% 20%, #fdfbf7 0%, #e8f0fe 100%);
             z-index: 9999;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             overflow-y: auto;
@@ -5138,10 +5130,6 @@
                     // Hide the global portal loader
                     const loaderEl = document.getElementById('portal-loader');
                     if (loaderEl) loaderEl.style.display = 'none';
-
-                    // Remove the temporary style that prevents auth-overlay flash
-                    const styleEl = document.getElementById('temp-hide-auth');
-                    if (styleEl) styleEl.remove();
                 }
             })();
         });
