@@ -4607,6 +4607,11 @@
                     });
                     if (response.ok) {
                         success = true;
+                    } else {
+                        attempts--;
+                        if (attempts > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
                     }
                 } catch (e) {
                     console.warn(`[Connection] Attempt to connect to server failed. Retries left: ${attempts - 1}`, e);
