@@ -4592,20 +4592,50 @@
 
         // Core App Initialization Check
         async function checkServerConnection() {
-            try {
-                const response = await fetch(`${API_URL}/vendors`, { method: 'GET', signal: AbortSignal.timeout(10000) });
-                if (response.ok) {
-                    serverMode = true;
-                    document.getElementById('server-mode-indicator').className = "badge-live-server";
-                    document.getElementById('server-status-text').textContent = "Live Express Server";
-                    console.log("[Connection] Active server found. Using Express + MongoDB Backend API.");
+            const isDeployed = window.location.hostname && 
+                               window.location.hostname !== 'localhost' && 
+                               window.location.hostname !== '127.0.0.1';
+            
+            let attempts = 3;
+            let success = false;
+            
+            while (attempts > 0 && !success) {
+                try {
+                    const response = await fetch(`${API_URL}/vendors`, { 
+                        method: 'GET', 
+                        signal: AbortSignal.timeout(10000) 
+                    });
+                    if (response.ok) {
+                        success = true;
+                    }
+                } catch (e) {
+                    console.warn(`[Connection] Attempt to connect to server failed. Retries left: ${attempts - 1}`, e);
+                    attempts--;
+                    if (attempts > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1500)); // wait 1.5s before retry
+                    }
                 }
-            } catch (e) {
-                serverMode = false;
-                document.getElementById('server-mode-indicator').className = "badge-sim-server";
-                document.getElementById('server-status-text').textContent = "Simulated Local Mode";
-                console.log("[Connection] Live server offline. Defaulting to Simulated LocalStorage.");
-                initLocalStorage();
+            }
+
+            if (success) {
+                serverMode = true;
+                document.getElementById('server-mode-indicator').className = "badge-live-server";
+                document.getElementById('server-status-text').textContent = "Live Express Server";
+                console.log("[Connection] Active server found. Using Express + MongoDB Backend API.");
+            } else {
+                if (isDeployed) {
+                    // Force serverMode = true on production even if server connection failed temporarily
+                    serverMode = true;
+                    document.getElementById('server-mode-indicator').className = "badge-live-server bg-danger";
+                    document.getElementById('server-status-text').textContent = "Live Server (Connection Error)";
+                    console.error("[Connection] Live server could not be reached. Forcing server mode for production.");
+                } else {
+                    serverMode = false;
+                    document.getElementById('server-mode-indicator').className = "badge-sim-server";
+                    document.getElementById('server-status-text').textContent = "Simulated Local Mode";
+                    console.log("[Connection] Live server offline. Defaulting to Simulated LocalStorage.");
+                    initLocalStorage();
+                }
             }
         }
 
@@ -5923,28 +5953,19 @@
                 }
 
                 // Calculate RFQ stats
-                const rfqs = await getRFQs();
                 let distributions = [];
                 if (serverMode) {
-                    for (const r of rfqs) {
-                        const details = await getRFQDetails(r.id);
-                        if (details && details.distributions) {
-                            details.distributions.forEach(d => {
-                                if (d.vendor_id === currentVendorId) {
-                                    distributions.push({
-                                        ...d,
-                                        rfq_number: r.rfq_number,
-                                        project_name: r.project_name,
-                                        rfq_date: r.rfq_date,
-                                        available_from: r.available_from,
-                                        available_to: r.available_to,
-                                        delivery_date: r.delivery_date
-                                    });
-                                }
-                            });
+                    try {
+                        const distsRes = await fetch(`${API_URL}/vendor-portal/distributions/${currentVendorId}`);
+                        const distsJson = await distsRes.json();
+                        if (distsJson.success) {
+                            distributions = distsJson.data;
                         }
+                    } catch (err) {
+                        console.error("Error loading vendor portal distributions:", err);
                     }
                 } else {
+                    const rfqs = await getRFQs();
                     const distsDb = JSON.parse(localStorage.getItem('semco_distributions')) || [];
                     distsDb.forEach(d => {
                         if (d.vendor_id === currentVendorId) {
@@ -11610,9 +11631,12 @@
                 } catch (e) {
                     console.error("Error loading dashboard stats:", e);
                 }
-            }
-
-            if (!stats) {
+                
+                if (!stats) {
+                    console.warn("[Dashboard] Could not fetch stats from Vercel server.");
+                    return;
+                }
+            } else {
                 // Local calculation fallback
                 const dists = JSON.parse(localStorage.getItem('semco_distributions')) || [];
                 const rfqsList = JSON.parse(localStorage.getItem('semco_rfqs')) || [];
@@ -13776,28 +13800,19 @@
                     setVal('t-dash-ifsc', t.ifsc_code);
                 }
 
-                const reqs = await getTransportRequests();
                 let distributions = [];
                 if (serverMode) {
-                    for (const r of reqs) {
-                        const details = await getTransportRequestDetails(r.id);
-                        if (details && details.distributions) {
-                            details.distributions.forEach(d => {
-                                if (d.transporter_id === currentTransporterId) {
-                                    distributions.push({
-                                        ...d,
-                                        request_number: r.request_number,
-                                        from_location: r.from_location,
-                                        to_location: r.to_location,
-                                        required_date: r.required_date,
-                                        expires_at: r.expires_at,
-                                        request_status: r.status
-                                    });
-                                }
-                            });
+                    try {
+                        const distsRes = await fetch(`${API_URL}/transporter-portal/distributions/${currentTransporterId}`);
+                        const distsJson = await distsRes.json();
+                        if (distsJson.success) {
+                            distributions = distsJson.data;
                         }
+                    } catch (err) {
+                        console.error("Error loading transporter distributions:", err);
                     }
                 } else {
+                    const reqs = await getTransportRequests();
                     const distsDb = JSON.parse(localStorage.getItem('semco_transport_distributions')) || [];
                     distsDb.forEach(d => {
                         if (d.transporter_id === currentTransporterId) {
