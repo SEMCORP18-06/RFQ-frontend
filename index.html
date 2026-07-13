@@ -5973,7 +5973,13 @@
                 const tbody = document.getElementById('vendor-dashboard-rfqs-tbody');
                 if (tbody) {
                     tbody.innerHTML = '';
-                    const activeDists = distributions.filter(d => (d.sent_at || d.status === 'Opened' || d.status === 'Sent') && d.status !== 'Submitted' && d.status !== 'Closed');
+                    const activeDists = distributions.filter(d => 
+                        (d.sent_at || d.status === 'Opened' || d.status === 'Sent') && 
+                        d.status !== 'Submitted' && 
+                        d.status !== 'Closed' && 
+                        d.status !== 'Expired' && 
+                        !(d.available_to && new Date() > new Date(d.available_to))
+                    );
                     if (activeDists.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No active sourcing requests found.</td></tr>`;
                     } else {
@@ -6002,32 +6008,43 @@
                     }
                 }
 
-                // Render Submitted Bids list table
+                // Render Submitted / Closed Bids list table
                 const submittedTbody = document.getElementById('vendor-dashboard-submitted-tbody');
                 if (submittedTbody) {
                     submittedTbody.innerHTML = '';
-                    const submittedDists = distributions.filter(d => d.status === 'Submitted' || d.status === 'Closed');
+                    const submittedDists = distributions.filter(d => 
+                        d.status === 'Submitted' || 
+                        d.status === 'Closed' || 
+                        d.status === 'Expired' || 
+                        (d.available_to && new Date() > new Date(d.available_to))
+                    );
                     if (submittedDists.length === 0) {
                         submittedTbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No submitted bids found.</td></tr>`;
                     } else {
                         submittedDists.forEach(d => {
                             const tr = document.createElement('tr');
                             let badgeClass = 'badge-submitted';
-                            if (d.status === 'Closed') badgeClass = 'badge-closed';
+                            let statusText = d.status;
+                            let btnHTML = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" onclick="switchTab('panel-vendor-portal', '${d.token}')"><i class="fa-solid fa-eye me-1"></i> View Bid</button>`;
+
+                            const isRfqExpired = d.status === 'Expired' || d.status === 'Closed' || (d.available_to && new Date() > new Date(d.available_to));
+                            if (isRfqExpired && d.status !== 'Submitted') {
+                                badgeClass = 'badge-closed';
+                                statusText = 'Closed';
+                                btnHTML = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" disabled><i class="fa-solid fa-lock me-1"></i> Closed</button>`;
+                            }
 
                             const windowFrom = formatDate(d.available_from);
                             const windowTo = formatDate(d.available_to);
                             const windowText = `${windowFrom} to ${windowTo}`;
                             const deliveryText = formatDate(d.delivery_date);
 
-                            const btnHTML = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" onclick="switchTab('panel-vendor-portal', '${d.token}')"><i class="fa-solid fa-eye me-1"></i> View Bid</button>`;
-
                             tr.innerHTML = `
                                 <td class="text-primary fw-bold">${d.rfq_number}</td>
                                 <td class="fw-semibold text-dark text-start">${d.project_name}</td>
                                 <td class="text-secondary">${windowText}</td>
                                 <td class="text-secondary">${deliveryText}</td>
-                                <td><span class="status-badge ${badgeClass}">${d.status}</span></td>
+                                <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
                                 <td>${btnHTML}</td>
                             `;
                             submittedTbody.appendChild(tr);
@@ -13738,11 +13755,11 @@
                     let badgeClass = 'badge-sent';
                     let statusLabel = d.status;
                     let actionsHtml = '';
-                    const isExpired = d.status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at));
+                    const isExpired = d.status === 'Expired' || d.request_status === 'Closed' || d.request_status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at));
 
                     if (isExpired && d.status !== 'Submitted') {
                         badgeClass = 'badge-closed';
-                        statusLabel = 'Expired';
+                        statusLabel = d.request_status === 'Closed' ? 'Closed' : 'Expired';
                         actionsHtml = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" disabled><i class="fa-solid fa-lock me-1"></i> Closed</button>`;
                     } else if (d.status === 'Submitted') {
                         badgeClass = 'badge-submitted';
