@@ -7383,7 +7383,7 @@
                             <div class="fs-8 fw-semibold">GST: ${v.gst_number || 'N/A'}</div>
                             <div class="text-secondary fs-8">PAN: ${v.pan_number || 'N/A'}</div>
                         </td>
-                        <td><span class="badge bg-primary fs-8">${v.category}</span></td>
+                        <td><span class="badge bg-primary fs-8">${v.category || 'Uncategorized'}</span></td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-1">
                                 <button class="btn btn-xs btn-outline-primary" onclick="openEditVendorModal('${v.id}')" title="Edit Vendor"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -7445,7 +7445,7 @@
                         <div class="fs-8 fw-semibold">GST: ${v.gst_number || 'N/A'}</div>
                         <div class="text-secondary fs-8">PAN: ${v.pan_number || 'N/A'}</div>
                     </td>
-                    <td><span class="badge bg-primary fs-8">${v.category}</span></td>
+                    <td><span class="badge bg-primary fs-8">${v.category || 'Uncategorized'}</span></td>
                     <td class="text-center">
                         <button class="btn btn-xs btn-outline-success me-1" onclick="recoverVendor('${v.id}')" title="Recover Vendor"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="btn btn-xs btn-outline-danger" onclick="deleteVendor('${v.id}')" title="Permanently Delete Vendor"><i class="fa-solid fa-trash"></i></button>
@@ -12682,7 +12682,7 @@
                         <div class="fs-8 fw-semibold">GST: ${t.gst_number || 'N/A'}</div>
                         <div class="text-secondary fs-8">PAN: ${t.pan_number || 'N/A'}</div>
                     </td>
-                    <td><span class="badge bg-primary fs-8">${t.category}</span></td>
+                    <td><span class="badge bg-primary fs-8">${t.category || 'Uncategorized'}</span></td>
                     <td class="text-center">
                         <button class="btn btn-xs btn-outline-success me-1" onclick="recoverTransporter('${t.id}')" title="Recover Transporter"><i class="fa-solid fa-rotate-left"></i></button>
                         <button class="btn btn-xs btn-outline-danger" onclick="deleteTransporter('${t.id}')" title="Permanently Delete Transporter"><i class="fa-solid fa-trash"></i></button>
@@ -12804,7 +12804,7 @@
                             <div class="fs-8 fw-semibold">GST: ${t.gst_number || 'N/A'}</div>
                             <div class="text-secondary fs-8">PAN: ${t.pan_number || 'N/A'}</div>
                         </td>
-                        <td><span class="badge bg-primary fs-8">${t.category}</span></td>
+                        <td><span class="badge bg-primary fs-8">${t.category || 'Uncategorized'}</span></td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-1">
                                 <button class="btn btn-xs btn-outline-primary" onclick="openEditTransporterModal('${t.id}')" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
