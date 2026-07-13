@@ -5668,7 +5668,9 @@
                                     if (d.vendor_id === currentVendorId) {
                                         distributions.push({
                                             ...d,
-                                            rfq_number: r.rfq_number
+                                            rfq_number: r.rfq_number,
+                                            rfq_status: r.status,
+                                            available_to: r.available_to
                                         });
                                     }
                                 });
@@ -5681,13 +5683,18 @@
                                 const r = rfqs.find(rfq => rfq.id === d.rfq_id);
                                 distributions.push({
                                     ...d,
-                                    rfq_number: r ? r.rfq_number : 'RFQ-XXX'
+                                    rfq_number: r ? r.rfq_number : 'RFQ-XXX',
+                                    rfq_status: r ? r.status : 'Draft',
+                                    available_to: r ? r.available_to : ''
                                 });
                             }
                         });
                     }
 
-                    const activeDists = distributions.filter(d => d.sent_at && d.status !== 'Closed');
+                    const activeDists = distributions.filter(d => {
+                        const isExpired = d.status === 'Expired' || d.rfq_status === 'Closed' || d.rfq_status === 'Expired' || (d.available_to && new Date() > new Date(d.available_to));
+                        return d.sent_at && d.status !== 'Closed' && !isExpired;
+                    });
                     if (activeDists.length === 0) {
                         html += `<li class="px-3 py-1 text-muted fs-9" style="list-style-type: none;">No active RFQs</li>`;
                     } else {
@@ -5729,7 +5736,9 @@
                                     if (d.transporter_id === currentTransporterId) {
                                         distributions.push({
                                             ...d,
-                                            request_number: r.request_number
+                                            request_number: r.request_number,
+                                            request_status: r.status,
+                                            expires_at: r.expires_at
                                         });
                                     }
                                 });
@@ -5742,13 +5751,18 @@
                                 const r = reqs.find(req => req.id === d.request_id);
                                 distributions.push({
                                     ...d,
-                                    request_number: r ? r.request_number : 'TRQ-XXX'
+                                    request_number: r ? r.request_number : 'TRQ-XXX',
+                                    request_status: r ? r.status : 'Draft',
+                                    expires_at: r ? r.expires_at : null
                                 });
                             }
                         });
                     }
 
-                    const activeDists = distributions.filter(d => d.sent_at && d.status !== 'Closed');
+                    const activeDists = distributions.filter(d => {
+                        const isExpired = d.status === 'Expired' || d.request_status === 'Closed' || d.request_status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at));
+                        return d.sent_at && d.status !== 'Closed' && !isExpired;
+                    });
                     if (activeDists.length === 0) {
                         html += `<li class="px-3 py-1 text-muted fs-9" style="list-style-type: none;">No active Bids</li>`;
                     } else {
