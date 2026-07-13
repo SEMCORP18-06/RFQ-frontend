@@ -10174,11 +10174,17 @@
                     }
 
                     const timerEl = document.getElementById('v-portal-timer');
+                    // Clear any stale interval from a previous portal load before starting fresh
+                    if (vendorPortalTimerInterval) {
+                        clearInterval(vendorPortalTimerInterval);
+                        vendorPortalTimerInterval = null;
+                    }
                     function updateVendorTimer() {
                         const now = new Date().getTime();
                         const diff = expiresTime - now;
                         if (diff <= 0) {
                             clearInterval(vendorPortalTimerInterval);
+                            vendorPortalTimerInterval = null;
                             if (timerEl) {
                                 timerEl.textContent = "Expired!";
                                 timerEl.className = "fw-bold text-danger fs-7";
@@ -10917,9 +10923,27 @@
             }
 
             if (finalSubmit) {
-                showCustomAlert('Submission Recorded', 'You are not the L1 vendor for this RFQ yet but your participation is highly valued');
+                showCustomAlert('Submission Recorded', 'Your bid has been submitted successfully! View your submission status in your dashboard.');
+                // Re-verify the token so currentVendorId is confirmed fresh, then navigate to dashboard
+                // This ensures the "Submitted Bids & Quotations" table is populated immediately.
+                if (serverMode && currentToken) {
+                    try {
+                        const reVerify = await fetch(`${API_URL}/vendor-portal/verify?token=${encodeURIComponent(currentToken)}`);
+                        const reVerifyJson = await reVerify.json();
+                        if (reVerifyJson.success && reVerifyJson.data) {
+                            currentVendorId = reVerifyJson.data.vendor?.vendor_id ||
+                                             reVerifyJson.data.vendor?.id ||
+                                             reVerifyJson.data.vendor_id ||
+                                             currentVendorId;
+                        }
+                    } catch (reVerifyErr) {
+                        console.warn('[Post-Submit Re-verify] Could not re-verify token, using cached currentVendorId:', reVerifyErr);
+                    }
+                }
                 await renderSidebar();
                 await switchTab('panel-vendor-dashboard');
+                // Explicitly await the dashboard refresh to guarantee the new bid appears
+                await refreshVendorDashboard();
             } else {
                 alert("Draft quotes saved successfully.");
                 simulateVendorPortalTokenAccess(currentToken);
@@ -14304,6 +14328,7 @@
                     
                     if (diff <= 0) {
                         clearInterval(portalTimerInterval);
+                        portalTimerInterval = null;
                         timerEl.textContent = "Expired!";
                         timerEl.className = "fw-bold text-danger fs-7";
                         
@@ -14340,6 +14365,11 @@
             if (loadingCard) loadingCard.classList.add('d-none');
             mainCard.style.display = 'block';
 
+            // Clear any stale interval from a previous portal load before starting fresh
+            if (portalTimerInterval) {
+                clearInterval(portalTimerInterval);
+                portalTimerInterval = null;
+            }
             updateTimer();
             portalTimerInterval = setInterval(updateTimer, 1000);
         }
@@ -14571,7 +14601,7 @@
                     }
                 }
 
-                showCustomAlert('Submission Recorded', 'You are not the L1 vendor for this RFQ yet but your participation is highly valued');
+                showCustomAlert('Submission Recorded', 'Your bid has been submitted successfully! View your submission status in your dashboard.');
                 
                 if (portalTimerInterval) {
                     clearInterval(portalTimerInterval);
@@ -14579,7 +14609,24 @@
                 }
 
                 if (currentRole === 'Transporter') {
+                    // Re-verify the token so currentTransporterId is confirmed fresh
+                    // This ensures the "Submitted Bids" table is populated immediately.
+                    if (serverMode && token) {
+                        try {
+                            const reVerify = await fetch(`${API_URL}/transporter-portal/verify?token=${encodeURIComponent(token)}`);
+                            const reVerifyJson = await reVerify.json();
+                            if (reVerifyJson.success && reVerifyJson.data) {
+                                currentTransporterId = reVerifyJson.data.transporter?.id ||
+                                                      reVerifyJson.data.transporter_id ||
+                                                      currentTransporterId;
+                            }
+                        } catch (reVerifyErr) {
+                            console.warn('[Post-Submit Re-verify] Could not re-verify transport token:', reVerifyErr);
+                        }
+                    }
                     await switchTab('panel-transporter-dashboard');
+                    // Explicitly await the dashboard refresh to guarantee the new bid appears
+                    await refreshTransporterDashboard();
                 } else {
                     await switchTab('panel-transporters');
                     document.getElementById('t-tracking-tab').click();
