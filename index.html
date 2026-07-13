@@ -1814,6 +1814,12 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
                     <div>
                         <h6 class="m-0 fw-semibold text-secondary">Analytics Scope</h6>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="text-muted" style="font-size:0.72rem;"><i class="fa-regular fa-clock me-1"></i>Updated: <span id="dashboard-last-updated">—</span></span>
+                            <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem; padding:2px 8px; border-radius:5px;" onclick="refreshDashboardCharts()" title="Refresh Dashboard">
+                                <i class="fa-solid fa-rotate-right me-1"></i>Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="btn-group" role="group" id="dashboard-scope-group">
                         <input type="radio" class="btn-check" name="dash-scope" id="dash-scope-combined" autocomplete="off" checked onclick="changeDashboardScope('combined')">
@@ -4699,7 +4705,7 @@
             if (serverMode) {
                 const res = await fetch(`${API_URL}/rfqs`);
                 const json = await res.json();
-                return json.data;
+                return Array.isArray(json.data) ? json.data : [];
             } else {
                 const rfqs = JSON.parse(localStorage.getItem('semco_rfqs'));
                 const items = JSON.parse(localStorage.getItem('semco_items'));
@@ -4820,13 +4826,7 @@
                 document.getElementById('header-clock').textContent = date.toISOString().slice(0, 19).replace('T', ' ');
             }, 1000);
 
-            // Periodically refresh dashboard metrics (every 3 seconds)
-            setInterval(() => {
-                const activePanel = document.querySelector('.tab-panel.active');
-                if (activePanel && activePanel.id === 'panel-dashboard') {
-                    refreshDashboardCharts();
-                }
-            }, 3000);
+            // Dashboard charts are refreshed on tab switch, scope change, or manual refresh — not on a timer.
 
             // Listen to localStorage changes in other tabs to update dashboard instantly in offline mode
             window.addEventListener('storage', (e) => {
@@ -5211,7 +5211,7 @@
             if (targetId === 'panel-dashboard') refreshDashboardCharts();
             else if (targetId === 'panel-vendors') refreshVendorsTable();
             else if (targetId === 'panel-rfq-create') resetRFQForm();
-            else if (targetId === 'panel-rfq-tracking') refreshRFQTrackingGrid();
+            else if (targetId === 'panel-rfq-tracking') await refreshRFQTrackingGrid();
             else if (targetId === 'panel-comparative') refreshComparativeSelectors();
             else if (targetId === 'panel-vendor-portal') {
                 if (token) {
@@ -9313,9 +9313,48 @@
 
         // ========== RFQ LIFECYCLE TRACKING (MODULE 5 & 6) ==========
         async function refreshRFQTrackingGrid() {
-            const rfqs = await getRFQs();
             const tbody = document.getElementById('tracking-tbody');
+            if (!tbody) return;
+
+            // Show loading skeleton
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span class="text-secondary">Loading RFQ Tracking Data...</span>
+                    </td>
+                </tr>`;
+
+            let rfqs = [];
+            try {
+                const data = await getRFQs();
+                rfqs = Array.isArray(data) ? data : [];
+            } catch (err) {
+                console.error('[Tracking] Failed to fetch RFQs:', err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-danger">
+                            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                            Failed to load tracking data. Please refresh the page.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
             tbody.innerHTML = '';
+
+            if (rfqs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div style="opacity:0.5;">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block text-secondary"></i>
+                                <div class="text-secondary fs-7 fw-semibold">No RFQs found. Create and launch an RFQ to see it here.</div>
+                            </div>
+                        </td>
+                    </tr>`;
+                return;
+            }
 
             rfqs.forEach(r => {
                 const sent = r.vendor_sent_count || 0;
@@ -9374,15 +9413,16 @@
                     `;
                 }
 
+                const statusStr = (r.status || 'draft').toLowerCase().replace(/\s+/g, '');
                 tr.innerHTML = `
                     <td class="text-primary fw-bold" style="font-size:0.75rem;">
                         <a href="#" onclick="openRFQDetailsModal('${r.id}'); return false;" class="text-decoration-none fw-bold"><i class="fa-solid fa-folder-open me-1"></i>${r.rfq_number}</a>
                     </td>
                     <td>
-                        <div class="fw-bold text-dark">${r.project_name}</div>
-                        <div class="text-secondary fs-8">Buyer: ${r.buyer_name}</div>
+                        <div class="fw-bold text-dark">${r.project_name || '-'}</div>
+                        <div class="text-secondary fs-8">Buyer: ${r.buyer_name || '-'}</div>
                     </td>
-                    <td class="text-secondary font-weight-semibold">${r.delivery_date}</td>
+                    <td class="text-secondary font-weight-semibold">${r.delivery_date || '-'}</td>
                     <td><span class="badge bg-secondary font-normal fs-8">${r.department || 'Procurement'}</span></td>
                     <td style="width: 200px;">
                         <div class="d-flex align-items-center gap-2">
@@ -9392,7 +9432,7 @@
                              <span class="fs-8 fw-semibold">${done}/${sent} (${pct}%)</span>
                         </div>
                     </td>
-                    <td><span class="status-badge badge-${r.status.toLowerCase().replace(' ', '')}">${r.status}</span></td>
+                    <td><span class="status-badge badge-${statusStr}">${r.status || 'Draft'}</span></td>
                     <td class="text-center" style="white-space: nowrap; min-width: 210px;">${actionsHTML}</td>
                 `;
                 tbody.appendChild(tr);
@@ -9871,26 +9911,46 @@
             currentToken = token;
             let details;
 
+            // Helper: show a clear error message inside the loading card
+            function showPortalError(msg) {
+                if (loadingCard) {
+                    loadingCard.innerHTML = `
+                        <div class="text-center py-5 px-4">
+                            <div class="mb-3" style="font-size:3rem; color:#dc2626;"><i class="fa-solid fa-circle-xmark"></i></div>
+                            <h5 class="fw-bold text-dark mb-2">Access Denied</h5>
+                            <p class="text-secondary fs-8 mb-4">${msg || 'Unable to access this RFQ portal. Please contact the administrator.'}</p>
+                            <p class="text-muted fs-9">If you believe this is an error, ask the admin to resend the invitation link.</p>
+                        </div>`;
+                    loadingCard.classList.remove('d-none');
+                }
+            }
+
             if (serverMode) {
-                const res = await fetch(`${API_URL}/vendor-portal/verify?token=${token}`);
-                const json = await res.json();
-                if (!json.success) {
-                    alert(json.message);
-                    if (loadingCard) loadingCard.classList.add('d-none');
-                    if (placeholderCard) placeholderCard.classList.remove('d-none');
-                    handleSignOut();
+                try {
+                    const res = await fetch(`${API_URL}/vendor-portal/verify?token=${encodeURIComponent(token)}`);
+                    let json;
+                    try {
+                        json = await res.json();
+                    } catch (_) {
+                        showPortalError('The server returned an unexpected response. Please try again later.');
+                        return;
+                    }
+                    if (!json.success) {
+                        showPortalError(json.message || 'Invalid or expired access link.');
+                        return;
+                    }
+                    details = json.data;
+                } catch (err) {
+                    console.error('[Vendor Portal] Verify fetch failed:', err);
+                    showPortalError('Could not connect to the server. Please check your internet connection and try again.');
                     return;
                 }
-                details = json.data;
             } else {
                 // Offline LocalStorage Token Decoding
                 const dists = JSON.parse(localStorage.getItem('semco_distributions'));
                 const dist = dists.find(d => d.token === token);
                 if (!dist) {
-                    alert("Your account does not exist. Please contact the administrator for further assistance.");
-                    if (loadingCard) loadingCard.classList.add('d-none');
-                    if (placeholderCard) placeholderCard.classList.remove('d-none');
-                    handleSignOut();
+                    showPortalError('Your account does not exist. Please contact the administrator for further assistance.');
                     return;
                 }
 
@@ -9926,12 +9986,8 @@
                 };
             }
 
-            // Set current vendor ID
+            // Set current vendor ID (backend verify already validated existence & archived status)
             currentVendorId = details.vendor.vendor_id || details.vendor.vendorId || details.vendor.id;
-
-            // Check vendor status
-            const isActive = await checkActiveVendorStatus(true);
-            if (!isActive) return;
 
             // Populate Portal UI
             document.getElementById('vendor-portal-rfq-num').textContent = details.rfq.rfq_number;
@@ -10624,12 +10680,6 @@
 
         // Submit Quotation (autoloader and final validation)
         async function submitVendorQuotation(finalSubmit) {
-            const isActive = await checkActiveVendorStatus(true);
-            if (!isActive) {
-                alert("Your account is currently inactive. You cannot submit or save quotes.");
-                return;
-            }
-
             const rows = document.querySelectorAll('#vendor-portal-items-tbody tr');
             const quotes = [];
             let isValid = true;
@@ -12250,6 +12300,13 @@
                     }
                 }
             });
+
+            // Stamp the last-updated time so users know exactly when data was received
+            const tsEl = document.getElementById('dashboard-last-updated');
+            if (tsEl) {
+                const now = new Date();
+                tsEl.textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
         }
 // ========== APPLICATION ROLE MANAGEMENT ==========
         function switchRole(role) {
@@ -13990,15 +14047,6 @@
             const transporter = data.transporter;
             currentTransporterId = transporter.id || null;
 
-            // Check active status
-            const isActive = await checkActiveTransporterStatus(true);
-            if (!isActive) {
-                if (loadingCard) loadingCard.classList.add('d-none');
-                mainCard.style.display = 'none';
-                errorCard.style.display = 'block';
-                if (errorMsg) errorMsg.textContent = "This secure link is no longer active because the transporter has been deactivated.";
-                return;
-            }
 
             document.getElementById('t-portal-token').value = token;
             document.getElementById('t-portal-transporter-info').textContent = `Transporter: ${transporter.name} (${transporter.id})`;
@@ -14401,13 +14449,6 @@
             if (rate_per_ton <= 0) {
                 alert('Please enter your Trip Rate before submitting.');
                 document.getElementById('t-quote-rate-per-unit').focus();
-                return;
-            }
-
-            // --- Guard: transporter active check ---
-            const isActive = await checkActiveTransporterStatus(true);
-            if (!isActive) {
-                alert('Your transporter account is currently inactive. Please contact the administrator.');
                 return;
             }
 
