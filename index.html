@@ -4082,7 +4082,11 @@
     <!-- CORE LOGIC: PERSISTENCE, API CONTEXT, ROUTING & CHART CREATION -->
     <script>
         // API Base URL
-        const API_URL = 'https://rfq-backend.vercel.app/api';
+        const API_URL = (window.location.host && window.location.host.includes('rfq-backend.vercel.app'))
+            ? `${window.location.protocol}//${window.location.host}/api`
+            : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? (window.location.port === '5000' ? '/api' : 'http://localhost:5000/api')
+                : 'https://rfq-backend.vercel.app/api';
         let serverMode = false;
         let currentUser = "Vijay Mehta";
         let currentRole = "Procurement Admin";
