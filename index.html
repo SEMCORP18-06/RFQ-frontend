@@ -5430,6 +5430,40 @@
         });
 
         async function switchTab(targetId, token = null) {
+            // Dynamically show/hide header widgets depending on admin vs partner portal context
+            const isExternalPortal = ['panel-vendor-portal', 'panel-transporter-portal', 'panel-vendor-dashboard', 'panel-transporter-dashboard', 'panel-onboarding-registration'].includes(targetId);
+            
+            const profileBtn = document.getElementById('profileDropdown');
+            if (profileBtn) {
+                const profileDrop = profileBtn.closest('.dropdown');
+                if (profileDrop) {
+                    if (isExternalPortal) {
+                        profileDrop.style.setProperty('display', 'none', 'important');
+                    } else {
+                        profileDrop.style.removeProperty('display');
+                    }
+                }
+            }
+            const notifBtn = document.getElementById('notif-btn');
+            if (notifBtn) {
+                const notifDrop = notifBtn.closest('.dropdown');
+                if (notifDrop) {
+                    if (isExternalPortal) {
+                        notifDrop.style.setProperty('display', 'none', 'important');
+                    } else {
+                        notifDrop.style.removeProperty('display');
+                    }
+                }
+            }
+            const clockWidget = document.getElementById('header-clock');
+            if (clockWidget) {
+                if (isExternalPortal) {
+                    clockWidget.style.setProperty('display', 'none', 'important');
+                } else {
+                    clockWidget.style.removeProperty('display');
+                }
+            }
+
             // Persist active tab selection to keep state across page refreshes
             const isDirectTokenLink = token || targetId === 'panel-vendor-portal' || targetId === 'panel-transporter-portal';
             if (!isDirectTokenLink) {
