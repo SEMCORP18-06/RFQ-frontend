@@ -10461,7 +10461,8 @@
             // Check if deadline has passed
             let isExpired = false;
             if (details.rfq.available_to) {
-                const expiresTime = new Date(details.rfq.available_to).getTime();
+                let expiresTime = new Date(details.rfq.available_to).getTime();
+                const rfqIdForSync = details.rfq.id;
                 if (!isNaN(expiresTime)) {
                     if (new Date().getTime() > expiresTime) {
                         isExpired = true;
@@ -10529,6 +10530,28 @@
                     }
                     updateVendorTimer();
                     vendorPortalTimerInterval = setInterval(updateVendorTimer, 1000);
+
+                    // Poll every 60s — picks up admin-extended windows without page reload
+                    if (window._vendorExpirySyncInterval) clearInterval(window._vendorExpirySyncInterval);
+                    window._vendorExpirySyncInterval = setInterval(async () => {
+                        try {
+                            const syncRes = await fetch(`${API_URL}/rfqs/${rfqIdForSync}/expiry`);
+                            const syncJson = await syncRes.json();
+                            if (syncJson.success && syncJson.available_to) {
+                                const newT = new Date(syncJson.available_to).getTime();
+                                if (newT !== expiresTime) {
+                                    expiresTime = newT;
+                                    const endsElSync = document.getElementById('vendor-portal-ends-date');
+                                    if (endsElSync) {
+                                        endsElSync.textContent = new Date(syncJson.available_to).toLocaleString('en-IN', {
+                                            day: '2-digit', month: 'short', year: 'numeric',
+                                            hour: '2-digit', minute: '2-digit', hour12: true
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+                    }, 60000);
                 } else {
                     const timerEl = document.getElementById('v-portal-timer');
                     if (timerEl) {
@@ -14724,7 +14747,8 @@
             calculateTransporterFinalCost();
 
             const startTime = req.vehicle_available_from ? new Date(req.vehicle_available_from).getTime() : 0;
-            const expiresTime = new Date(req.expires_at).getTime();
+            let expiresTime = new Date(req.expires_at).getTime();
+            const transportReqIdForSync = req.id;
             const timerEl = document.getElementById('t-portal-timer');
 
             function setFormDisabled(disabled) {
@@ -14812,6 +14836,28 @@
             }
             updateTimer();
             portalTimerInterval = setInterval(updateTimer, 1000);
+
+            // Poll every 60s — picks up admin-extended windows without page reload
+            if (window._transportExpirySyncInterval) clearInterval(window._transportExpirySyncInterval);
+            window._transportExpirySyncInterval = setInterval(async () => {
+                try {
+                    const syncRes = await fetch(`${API_URL}/transport-requests/${transportReqIdForSync}/expiry`);
+                    const syncJson = await syncRes.json();
+                    if (syncJson.success && syncJson.expires_at) {
+                        const newT = new Date(syncJson.expires_at).getTime();
+                        if (newT !== expiresTime) {
+                            expiresTime = newT;
+                            const tExpiresElSync = document.getElementById('t-portal-expires-date');
+                            if (tExpiresElSync) {
+                                tExpiresElSync.textContent = new Date(syncJson.expires_at).toLocaleString('en-IN', {
+                                    day: '2-digit', month: 'short', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit', hour12: true
+                                });
+                            }
+                        }
+                    }
+                } catch (_) {}
+            }, 60000);
         }
 
         function toggleReturnTripRateInput() {
