@@ -11363,56 +11363,59 @@
             
             const prevSelectedVal = selectEl.value;
             const hadOptions = selectEl.options.length > 0;
-            selectEl.innerHTML = '';
             
-            // Add a default placeholder option for Show Combined Summary
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = "";
-            defaultOpt.textContent = "Show Combined Summary (All RFQs)";
-            if (hadOptions && prevSelectedVal === "") {
-                defaultOpt.selected = true;
-            }
-            selectEl.appendChild(defaultOpt);
-
             const eligibleRFQs = rfqs.filter(r => r.status === 'Submitted' || r.status === 'In Progress' || r.status === 'Sent');
-            if (eligibleRFQs.length === 0) {
-                const opt = document.createElement('option');
-                opt.value = "";
-                opt.textContent = "No active or submitted RFQs found";
-                selectEl.appendChild(opt);
-                loadComparativeStatement();
-                return;
-            }
+            
+            // Generate option values signature to see if the list of RFQs actually changed
+            const currentOptionVals = Array.from(selectEl.options).map(o => o.value).join(',');
+            const newOptionVals = ',' + eligibleRFQs.map(r => r.id).join(',');
+            
+            if (!hadOptions || currentOptionVals !== newOptionVals) {
+                selectEl.innerHTML = '';
+                
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.textContent = "Show Combined Summary (All RFQs)";
+                if (hadOptions && prevSelectedVal === "") {
+                    defaultOpt.selected = true;
+                }
+                selectEl.appendChild(defaultOpt);
 
-            eligibleRFQs.forEach((r, idx) => {
-                const opt = document.createElement('option');
-                opt.value = r.id;
-                
-                // Format the Sent Date beautifully
-                let sentDateStr = 'Not Sent';
-                if (r.available_from) {
-                    try {
-                        const d = new Date(r.available_from);
-                        if (!isNaN(d.getTime())) {
-                            sentDateStr = d.toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
+                if (eligibleRFQs.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.textContent = "No active or submitted RFQs found";
+                    selectEl.appendChild(opt);
+                } else {
+                    eligibleRFQs.forEach((r, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = r.id;
+                        let sentDateStr = 'Not Sent';
+                        if (r.available_from) {
+                            try {
+                                const d = new Date(r.available_from);
+                                if (!isNaN(d.getTime())) {
+                                    sentDateStr = d.toLocaleDateString('en-IN', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+                                }
+                            } catch (_) {}
                         }
-                    } catch (_) {}
+                        opt.textContent = `${r.rfq_number} - ${r.project_name} (Sent: ${sentDateStr})`;
+                        if (prevSelectedVal === r.id || (!hadOptions && idx === 0)) {
+                            opt.selected = true;
+                        }
+                        selectEl.appendChild(opt);
+                    });
                 }
-                
-                opt.textContent = `${r.rfq_number} - ${r.project_name} (Sent: ${sentDateStr})`;
-                
-                // Select previous choice, or the first eligible RFQ by default on first load
-                if (prevSelectedVal === r.id || (!hadOptions && idx === 0)) {
-                    opt.selected = true;
-                }
-                selectEl.appendChild(opt);
-            });
+            } else {
+                // Keep the selection exactly as it was without modifying options
+                selectEl.value = prevSelectedVal;
+            }
 
             loadComparativeStatement();
         }
@@ -11428,7 +11431,7 @@
         async function loadCombinedComparativeStatement() {
             const rfqs = await getRFQs();
             const tbody = document.getElementById('combined-comparative-tbody');
-            tbody.innerHTML = '';
+            if (!tbody) return;
 
             const activeRFQs = rfqs.filter(r => r.status !== 'Draft');
             if (activeRFQs.length === 0) {
@@ -11436,8 +11439,32 @@
                 return;
             }
 
-            activeRFQs.forEach(async r => {
+            // Fetch all comparative data in parallel
+            const rfqDataList = await Promise.all(activeRFQs.map(async r => {
                 const compData = await getRFQComparativeData(r.id);
+                return { rfq: r, compData };
+            }));
+
+            // Create a JSON string hash of this data to check if anything actually changed!
+            const currentDataHash = JSON.stringify(rfqDataList.map(item => ({
+                id: item.rfq.id,
+                status: item.rfq.status,
+                rankings: item.compData ? item.compData.rankings.map(rank => ({
+                    vendor_id: rank.vendor_id,
+                    final_cost: rank.final_cost
+                })) : []
+            })));
+
+            // If the data is identical to what's already displayed, do not touch the DOM!
+            if (tbody.getAttribute('data-hash') === currentDataHash) {
+                return;
+            }
+            tbody.setAttribute('data-hash', currentDataHash);
+
+            tbody.innerHTML = '';
+            rfqDataList.forEach(item => {
+                const r = item.rfq;
+                const compData = item.compData;
                 const tr = document.createElement('tr');
                 
                 let l1Vendor = '<span class="text-muted">—</span>';
@@ -11447,26 +11474,25 @@
                 let advantage = '<span class="text-muted">—</span>';
 
                 if (compData && compData.rankings && compData.rankings.length > 0) {
-                    l1Vendor = `<span class="fw-bold text-success">${compData.winner.vendor}</span>`;
-                    l1Value = `<span class="fw-semibold text-primary">₹${parseFloat(compData.winner.value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>`;
+                    const winner = compData.rankings[0];
+                    l1Vendor = `<strong>${winner.vendor}</strong>`;
+                    l1Value = `₹${winner.final_cost.toFixed(2)}`;
                     
                     if (compData.rankings.length > 1) {
-                        l2Vendor = `<span class="text-dark">${compData.rankings[1].vendor}</span>`;
-                        savings = `<span class="fw-bold text-success">₹${parseFloat(compData.winner.savings).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>`;
-                        advantage = `<span class="badge bg-success-subtle text-success fs-8 fw-semibold">${compData.winner.advantage}</span>`;
+                        const l2 = compData.rankings[1];
+                        l2Vendor = `${l2.vendor} (₹${l2.final_cost.toFixed(2)})`;
+                    }
+                    if (compData.winner) {
+                        savings = `₹${parseFloat(compData.winner.savings || 0).toFixed(2)}`;
+                        advantage = compData.winner.advantage || '0.0%';
                     }
                 }
 
                 tr.innerHTML = `
-                    <td class="text-primary fw-bold" style="font-size:0.75rem;">
-                        <a href="#" onclick="openRFQDetailsModal('${r.id}'); return false;" class="text-decoration-none fw-bold"><i class="fa-solid fa-folder-open me-1"></i>${r.rfq_number}</a>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark" style="color:var(--text-primary) !important;">${r.project_name}</div>
-                    </td>
-                    <td><span class="badge bg-secondary font-normal fs-8">${r.department || 'Procurement'}</span></td>
+                    <td class="text-primary fw-bold fs-9">${r.rfq_number}</td>
+                    <td class="fw-bold">${r.project_name}</td>
                     <td>${l1Vendor}</td>
-                    <td>${l1Value}</td>
+                    <td class="text-success fw-bold">${l1Value}</td>
                     <td>${l2Vendor}</td>
                     <td>${savings}</td>
                     <td>${advantage}</td>
