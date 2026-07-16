@@ -3118,8 +3118,50 @@
                                 </div>
                             </div>
 
+                            <!-- Combined Transport Comparative Summary (All Requests) -->
+                            <div id="t-combined-comparative-area" class="mb-4">
+                                <div class="dashboard-card">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fw-bold mb-0"><i class="fa-solid fa-list-check text-primary me-2"></i> Combined Transport Comparative Summary</h6>
+                                        <span class="fs-8 text-secondary">Overview of winning bids, routes, values, and total savings. Click on any request to drill down.</span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle text-center">
+                                            <thead>
+                                                <tr>
+                                                    <th>Request Number</th>
+                                                    <th>Route (From &rarr; To)</th>
+                                                    <th>Required Date</th>
+                                                    <th>L1 Transporter</th>
+                                                    <th>Winning Bid (L1)</th>
+                                                    <th>L2 Runner-up</th>
+                                                    <th>Savings</th>
+                                                    <th>Advantage</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="t-combined-comparative-tbody">
+                                                <!-- Dynamic summary -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="transport-details-card" style="display:none;" class="mb-4">
                                 <!-- Request specs summary card -->
+                            </div>
+
+                            <!-- Side-by-side Total Quote Comparison Chart for Transport -->
+                            <div class="row g-4 mb-4" id="t-comparative-chart-row" style="display:none;">
+                                <div class="col-12">
+                                    <div class="dashboard-card">
+                                        <h6 class="fw-bold border-bottom pb-2 mb-3"><i class="fa-solid fa-chart-bar text-primary me-2"></i> Side-by-Side Transport Quote Comparison (INR)</h6>
+                                        <div style="height: 250px; position: relative;">
+                                            <canvas id="chartTransportComparativeQuotes"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div id="transport-comparative-statement" style="display:none;">
@@ -3165,6 +3207,8 @@
                                         <option value="transporter-desc">Transporter Name (Z-A)</option>
                                         <option value="value-asc">Total Value (Lowest to Highest)</option>
                                         <option value="value-desc">Total Value (Highest to Lowest)</option>
+                                        <option value="date-desc">Submission Date (Newest first)</option>
+                                        <option value="date-asc">Submission Date (Oldest first)</option>
                                     </select>
                                 </div>
                             </div>
@@ -3174,6 +3218,7 @@
                                     <thead class="table-dark sticky-top">
                                         <tr>
                                             <th>REQUEST NUMBER</th>
+                                            <th>RANK</th>
                                             <th>TRANSPORTER PARTNER</th>
                                             <th>ROUTE (FROM &rarr; TO)</th>
                                             <th>VEHICLE SIZE</th>
@@ -3184,6 +3229,7 @@
                                             <th>TOTAL (EXCL. GST)</th>
                                             <th>GST %</th>
                                             <th>TOTAL (INCL. GST)</th>
+                                            <th>SUBMITTED AT</th>
                                             <th>PAYMENT TERMS</th>
                                         </tr>
                                     </thead>
@@ -13835,12 +13881,21 @@
             const actionsWrapper = document.getElementById('transport-actions-wrapper');
             const comparativeStatement = document.getElementById('transport-comparative-statement');
 
+            const combinedArea = document.getElementById('t-combined-comparative-area');
+            const chartRow = document.getElementById('t-comparative-chart-row');
             if (!select || select.value === '') {
                 if (detailsCard) detailsCard.style.display = 'none';
                 if (actionsWrapper) actionsWrapper.style.display = 'none';
                 if (comparativeStatement) comparativeStatement.style.display = 'none';
+                if (chartRow) chartRow.style.display = 'none';
+                if (combinedArea) {
+                    combinedArea.style.display = 'block';
+                    loadCombinedTransportComparativeStatement();
+                }
                 return;
             }
+
+            if (combinedArea) combinedArea.style.display = 'none';
 
             const requestId = select.value;
             let data;
@@ -13942,6 +13997,8 @@
                 });
 
                 if (req.status === 'Draft') {
+                    const chartRow = document.getElementById('t-comparative-chart-row');
+                    if (chartRow) chartRow.style.display = 'none';
                     comparativeStatement.innerHTML = `
                         <div class="text-center py-5 text-secondary">
                             <i class="fa-solid fa-paper-plane fs-1 mb-3 d-block"></i>
@@ -13949,6 +14006,8 @@
                             <p class="fs-8">Launch the bidding window first so transporters can submit their bids.</p>
                         </div>`;
                 } else if (submittedColumns.length === 0) {
+                    const chartRow = document.getElementById('t-comparative-chart-row');
+                    if (chartRow) chartRow.style.display = 'none';
                     comparativeStatement.innerHTML = `
                         <div class="text-center py-5 text-secondary">
                             <i class="fa-solid fa-hourglass-half fs-1 mb-3 d-block"></i>
@@ -14126,6 +14185,10 @@
                             </div>
                         </div>
                     `;
+
+                    const chartRow = document.getElementById('t-comparative-chart-row');
+                    if (chartRow) chartRow.style.display = 'block';
+                    renderTransportComparativeQuotesChart(data);
                 }
             }
         }
@@ -15155,7 +15218,10 @@
 
                     let actionsHTML = '';
                     if (r.status === 'Draft' || sent === 0) {
-                        actionsHTML = '';
+                        actionsHTML = `
+                            <button class="btn btn-xs btn-success fw-bold me-1" onclick="launchDraftTransport('${r.id}', '${r.request_number}')" title="Launch Request"><i class="fa-solid fa-paper-plane me-1"></i> Launch</button>
+                            <button class="btn btn-xs btn-outline-danger" onclick="deleteDraftTransport('${r.id}', '${r.request_number}')" title="Delete Draft"><i class="fa-solid fa-trash"></i></button>
+                        `;
                     } else if (sent > 0 && done === sent) {
                         actionsHTML = `
                             <div class="d-flex align-items-center gap-1 flex-nowrap">
@@ -15185,8 +15251,14 @@
                         `;
                     } else {
                         // status is Sent / active (done < sent)
+                        const finaliseBtn = done > 0 ? `
+                            <button class="btn btn-xs btn-outline-success fw-bold" onclick="confirmTransportFinalisation('${r.id}')" title="Finalise Bidding" style="border-radius:6px; font-size:0.72rem; padding:3px 8px;">
+                                <i class="fa-solid fa-check-double"></i> Finalise
+                            </button>
+                        ` : '';
                         actionsHTML = `
                             <div class="d-flex align-items-center gap-1 flex-nowrap">
+                                ${finaliseBtn}
                                 <button class="btn btn-xs btn-outline-warning" onclick="resendTransportReminders('${r.id}')" title="Send Transporter Reminders" style="border-radius:6px; font-size:0.72rem; padding:3px 8px;">
                                     <i class="fa-solid fa-bell"></i> Remind
                                 </button>
@@ -15452,6 +15524,232 @@
             });
         }
 
+        async function launchDraftTransport(requestId, requestNum) {
+            const details = await getTransportRequestDetails(requestId);
+            if (!details || !details.distributions || details.distributions.length === 0) {
+                alert("No transporters were selected for this request. Please edit or recreate it with transporters.");
+                return;
+            }
+
+            const transporterIds = details.distributions.map(d => d.transporter_id);
+            window.showCustomConfirm(
+                "Launch Transport Bid Request",
+                `Are you sure you want to launch request ${requestNum} to ${transporterIds.length} transporters now?`,
+                async () => {
+                    await launchTransportRequest(requestId);
+                }
+            );
+        }
+
+        async function deleteDraftTransport(requestId, requestNum) {
+            window.showCustomConfirm(
+                "Delete Draft Transport Request",
+                `Are you sure you want to delete draft Transport Request ${requestNum}? This action cannot be undone.`,
+                async () => {
+                    if (serverMode) {
+                        try {
+                            const res = await fetch(`${API_URL}/transport-requests/${requestId}`, { method: 'DELETE' });
+                            const json = await res.json();
+                            if (!json.success) return alert(json.message);
+                        } catch (err) {
+                            return alert(`Error deleting draft request: ${err.message}`);
+                        }
+                    } else {
+                        let requests = JSON.parse(localStorage.getItem('semco_transport_requests')) || [];
+                        requests = requests.filter(r => r.id !== requestId);
+                        localStorage.setItem('semco_transport_requests', JSON.stringify(requests));
+
+                        let items = JSON.parse(localStorage.getItem('semco_transport_items')) || [];
+                        items = items.filter(i => i.request_id !== requestId);
+                        localStorage.setItem('semco_transport_items', JSON.stringify(items));
+
+                        let dists = JSON.parse(localStorage.getItem('semco_transport_distributions')) || [];
+                        dists = dists.filter(d => d.request_id !== requestId);
+                        localStorage.setItem('semco_transport_distributions', JSON.stringify(dists));
+                    }
+                    showCustomAlert('Deleted', `Draft Transport Request ${requestNum} has been deleted.`);
+                    refreshTransportTrackingDashboard();
+                }
+            );
+        }
+
+        async function loadCombinedTransportComparativeStatement() {
+            const tbody = document.getElementById('t-combined-comparative-tbody');
+            if (!tbody) return;
+
+            let requests = [];
+            try {
+                if (serverMode) {
+                    const res = await fetch(`${API_URL}/transport-requests`);
+                    const json = await res.json();
+                    requests = json.success ? json.data : [];
+                } else {
+                    requests = JSON.parse(localStorage.getItem('semco_transport_requests')) || [];
+                }
+            } catch (err) {
+                console.error("Error fetching transport requests for summary:", err);
+                return;
+            }
+
+            const activeRequests = requests.filter(r => r.status !== 'Draft');
+            if (activeRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No active transport requests available.</td></tr>`;
+                return;
+            }
+
+            const reqDataList = await Promise.all(activeRequests.map(async r => {
+                let compData = null;
+                try {
+                    if (serverMode) {
+                        const compRes = await fetch(`${API_URL}/transport-requests/${r.id}/comparative`);
+                        const compJson = await compRes.json();
+                        if (compJson.success) compData = compJson.data;
+                    } else {
+                        compData = await getOfflineComparativeData(r.id);
+                    }
+                } catch (_) {}
+                return { request: r, compData };
+            }));
+
+            // Create a JSON string hash of this data to check if anything actually changed
+            const currentDataHash = JSON.stringify(reqDataList.map(item => ({
+                id: item.request.id,
+                status: item.request.status,
+                rankings: item.compData ? item.compData.rankings.map(rank => ({
+                    transporter_id: rank.transporter_id,
+                    final_cost: rank.final_cost
+                })) : []
+            })));
+
+            if (tbody.getAttribute('data-hash') === currentDataHash) {
+                return;
+            }
+            tbody.setAttribute('data-hash', currentDataHash);
+
+            tbody.innerHTML = '';
+            reqDataList.forEach(item => {
+                const r = item.request;
+                const compData = item.compData;
+                const tr = document.createElement('tr');
+                
+                let l1Transporter = '<span class="text-muted">—</span>';
+                let l1Value = '<span class="text-muted">—</span>';
+                let l2Transporter = '<span class="text-muted">—</span>';
+                let savings = '<span class="text-muted">—</span>';
+                let advantage = '<span class="text-muted">—</span>';
+
+                if (compData && compData.rankings && compData.rankings.length > 0) {
+                    const winner = compData.rankings[0];
+                    l1Transporter = `<strong>${winner.transporter}</strong>`;
+                    l1Value = `₹${parseFloat(winner.final_cost).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    
+                    if (compData.rankings.length > 1) {
+                        const l2 = compData.rankings[1];
+                        l2Transporter = `${l2.transporter} (₹${parseFloat(l2.final_cost).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+                    }
+                    if (compData.winner) {
+                        savings = `₹${parseFloat(compData.winner.savings || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        advantage = compData.winner.advantage || '0.0%';
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td class="text-primary fw-bold fs-9">
+                        <a href="#" onclick="drillDownTransport('${r.id}'); return false;" class="text-decoration-none fw-bold"><i class="fa-solid fa-magnifying-glass-chart me-1"></i>${r.request_number}</a>
+                    </td>
+                    <td class="fw-bold">${r.from_location} &rarr; ${r.to_location}</td>
+                    <td>${r.required_date}</td>
+                    <td>${l1Transporter}</td>
+                    <td class="text-success fw-bold">${l1Value}</td>
+                    <td>${l2Transporter}</td>
+                    <td>${savings}</td>
+                    <td>${advantage}</td>
+                    <td><span class="status-badge badge-${r.status.toLowerCase().replace(' ', '')}">${r.status === 'Sent' ? 'Bidding Active' : r.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function drillDownTransport(requestId) {
+            const selectEl = document.getElementById('comparative-transport-select');
+            if (selectEl) {
+                selectEl.value = requestId;
+            }
+            loadTransportComparativeDetails();
+        }
+
+        let chartInstanceTransportComparative = null;
+        function renderTransportComparativeQuotesChart(data) {
+            const ctx = document.getElementById('chartTransportComparativeQuotes');
+            if (!ctx) return;
+
+            const existing = Chart.getChart(ctx);
+            if (existing) {
+                existing.destroy();
+            }
+            if (chartInstanceTransportComparative) {
+                chartInstanceTransportComparative.destroy();
+            }
+
+            const style = getComputedStyle(document.documentElement);
+            const gridColor = style.getPropertyValue('--border-color').trim() || '#e2e8f0';
+            const textColor = style.getPropertyValue('--text-secondary').trim() || '#64748b';
+            const accentGreen = style.getPropertyValue('--accent-green').trim() || '#4fa87c';
+            const accentBlue = style.getPropertyValue('--accent-blue').trim() || '#5c89d6';
+            const accentOrange = style.getPropertyValue('--accent-orange').trim() || '#f58d51';
+
+            const labels = data.rankings.map(r => r.transporter_name);
+            const dataValues = data.rankings.map(r => r.final_cost);
+
+            const bgColors = data.rankings.map((r, idx) => {
+                if (idx === 0) return accentGreen;
+                if (idx === 1) return accentBlue;
+                return accentOrange;
+            });
+
+            chartInstanceTransportComparative = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Transport Quote Value (INR)',
+                        data: dataValues,
+                        backgroundColor: bgColors,
+                        borderRadius: 6,
+                        barThickness: 45
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Total Quote: ₹' + context.raw.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'Inter', size: 10 } }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'Inter', size: 10 },
+                                callback: function(value) { return '₹' + value.toLocaleString('en-IN'); }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         let allTransportSubmissions = [];
 
         async function refreshTransportSubmittedQuotes() {
@@ -15545,8 +15843,31 @@
                     const valA = parseFloat(a.final_cost) || 0;
                     const valB = parseFloat(b.final_cost) || 0;
                     return valB - valA;
+                } else if (sortVal === 'date-desc') {
+                    const dateA = new Date(a.submitted_at || 0).getTime();
+                    const dateB = new Date(b.submitted_at || 0).getTime();
+                    return dateB - dateA;
+                } else if (sortVal === 'date-asc') {
+                    const dateA = new Date(a.submitted_at || 0).getTime();
+                    const dateB = new Date(b.submitted_at || 0).getTime();
+                    return dateA - dateB;
                 }
                 return 0;
+            });
+
+            // Compute rank map dynamically per request group
+            const rankMap = {};
+            const groups = {};
+            allTransportSubmissions.forEach(s => {
+                if (!groups[s.request_id]) groups[s.request_id] = [];
+                groups[s.request_id].push(s);
+            });
+            Object.keys(groups).forEach(reqId => {
+                const sortedGroup = [...groups[reqId]].sort((a, b) => (parseFloat(a.final_cost) || 0) - (parseFloat(b.final_cost) || 0));
+                rankMap[reqId] = {};
+                sortedGroup.forEach((s, idx) => {
+                    rankMap[reqId][s.transporter_id] = idx + 1;
+                });
             });
 
             const countDisplay = document.getElementById('t-quotes-count-display');
@@ -15555,14 +15876,17 @@
             let totalSum = 0;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="13" class="text-center text-secondary py-3"><i class="fa-solid fa-info-circle me-1"></i> No matching submitted quotes found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center text-secondary py-3"><i class="fa-solid fa-info-circle me-1"></i> No matching submitted quotes found.</td></tr>`;
                 if (countDisplay) countDisplay.textContent = '0';
                 if (sumDisplay) sumDisplay.textContent = '₹0.00';
                 return;
             }
 
             filtered.forEach(s => {
-                const submittedDate = s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '-';
+                const submittedDate = s.submitted_at ? new Date(s.submitted_at).toLocaleString('en-IN', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                }) : '-';
                 const finalCost = parseFloat(s.final_cost) || 0;
                 totalSum += finalCost;
                 
@@ -15573,11 +15897,26 @@
                 const odc = s.odc_charges || 0;
                 const baseCost = finalCost / (1 + (taxRate / 100));
 
+                const rankNum = rankMap[s.request_id]?.[s.transporter_id] || 0;
+                let rankBadge = '';
+                if (rankNum === 1) {
+                    rankBadge = '<span class="badge bg-success">L1</span>';
+                } else if (rankNum === 2) {
+                    rankBadge = '<span class="badge bg-warning text-dark">L2</span>';
+                } else if (rankNum === 3) {
+                    rankBadge = '<span class="badge bg-info text-dark">L3</span>';
+                } else if (rankNum > 3) {
+                    rankBadge = `<span class="badge bg-secondary">L${rankNum}</span>`;
+                } else {
+                    rankBadge = '<span class="badge bg-light text-dark">—</span>';
+                }
+
                 tbody.innerHTML += `
                     <tr>
                         <td class="text-primary fw-bold">
                             <a href="#" onclick="viewComparativeForRequest('${s.request_id}'); return false;" class="text-decoration-none">${s.request_number}</a>
                         </td>
+                        <td>${rankBadge}</td>
                         <td>
                             <div class="fw-bold text-dark text-start">
                                 <a href="#" onclick="viewTransporterQuotations('${s.transporter_id}', '${s.transporter_name.replace(/'/g, "\\'")}'); return false;">${s.transporter_name}</a>
@@ -15598,6 +15937,7 @@
                             <span class="badge bg-light text-dark border">${taxRate}%</span>
                         </td>
                         <td class="text-success fw-bold text-end">₹${finalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>${submittedDate}</td>
                         <td class="fw-semibold text-wrap text-start" style="font-size:0.75rem; max-width: 140px;">${s.payment_terms || '<span class="text-muted">—</span>'}</td>
                     </tr>
                 `;
