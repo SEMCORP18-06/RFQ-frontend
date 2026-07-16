@@ -11362,12 +11362,16 @@
             if (!selectEl) return;
             
             const prevSelectedVal = selectEl.value;
+            const hadOptions = selectEl.options.length > 0;
             selectEl.innerHTML = '';
             
             // Add a default placeholder option for Show Combined Summary
             const defaultOpt = document.createElement('option');
             defaultOpt.value = "";
             defaultOpt.textContent = "Show Combined Summary (All RFQs)";
+            if (hadOptions && prevSelectedVal === "") {
+                defaultOpt.selected = true;
+            }
             selectEl.appendChild(defaultOpt);
 
             const eligibleRFQs = rfqs.filter(r => r.status === 'Submitted' || r.status === 'In Progress' || r.status === 'Sent');
@@ -11403,8 +11407,8 @@
                 
                 opt.textContent = `${r.rfq_number} - ${r.project_name} (Sent: ${sentDateStr})`;
                 
-                // Select previous choice, or the first eligible RFQ by default
-                if (prevSelectedVal === r.id || (!prevSelectedVal && idx === 0)) {
+                // Select previous choice, or the first eligible RFQ by default on first load
+                if (prevSelectedVal === r.id || (!hadOptions && idx === 0)) {
                     opt.selected = true;
                 }
                 selectEl.appendChild(opt);
