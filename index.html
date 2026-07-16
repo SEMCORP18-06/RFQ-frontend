@@ -3393,6 +3393,10 @@
                                         <span class="fw-semibold text-secondary fs-9 d-block">Delivery Date</span>
                                         <span class="fw-bold fs-8 text-danger" id="t-portal-req-date">-</span>
                                     </div>
+                                    <div class="col-6 col-md-3">
+                                        <span class="fw-semibold text-secondary fs-9 d-block">Bid Closes At</span>
+                                        <span class="fw-bold fs-8 text-danger" id="t-portal-expires-date">-</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -10413,8 +10417,23 @@
                 }
             };
 
-            const windowFrom = formatDate(details.rfq.available_from);
-            const windowTo = formatDate(details.rfq.available_to);
+            // Format date + time helper (shows full datetime for deadline fields)
+            const formatDateTime = (dStr) => {
+                if (!dStr) return '-';
+                try {
+                    const d = new Date(dStr);
+                    if (isNaN(d.getTime())) return dStr;
+                    return d.toLocaleString('en-IN', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: true
+                    });
+                } catch (_) {
+                    return dStr;
+                }
+            };
+
+            const windowFrom = formatDateTime(details.rfq.available_from);
+            const windowTo   = formatDateTime(details.rfq.available_to);
             const expectedDeliv = formatDate(details.rfq.delivery_date);
 
             // Show / render Excel spreadsheet viewer if file was attached AND admin has allowed visibility
@@ -14488,6 +14507,24 @@
             document.getElementById('t-portal-from').textContent = req.from_location;
             document.getElementById('t-portal-to').textContent = req.to_location;
             document.getElementById('t-portal-req-date').textContent = req.required_date;
+
+            // Show real-time bid closing deadline
+            const tExpiresEl = document.getElementById('t-portal-expires-date');
+            if (tExpiresEl) {
+                if (req.expires_at) {
+                    try {
+                        const expD = new Date(req.expires_at);
+                        tExpiresEl.textContent = expD.toLocaleString('en-IN', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit', hour12: true
+                        });
+                    } catch (_) {
+                        tExpiresEl.textContent = req.expires_at;
+                    }
+                } else {
+                    tExpiresEl.textContent = '-';
+                }
+            }
 
             // Calculate live ranking
             if (!serverMode) {
