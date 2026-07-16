@@ -4716,11 +4716,14 @@
                 // 1. Sync Vendors
                 const serverVendorsRes = await fetch(`${API_URL}/vendors`);
                 const serverVendorsJson = await serverVendorsRes.json();
-                if (serverVendorsJson.success && Array.isArray(serverVendorsJson.data)) {
-                    const serverVendors = serverVendorsJson.data;
+                const serverArchivedRes = await fetch(`${API_URL}/vendors/archived`);
+                const serverArchivedJson = await serverArchivedRes.json();
+
+                if (serverVendorsJson.success && serverArchivedJson.success && Array.isArray(serverVendorsJson.data) && Array.isArray(serverArchivedJson.data)) {
+                    const serverVendors = [...serverVendorsJson.data, ...serverArchivedJson.data];
                     const localVendors = JSON.parse(localStorage.getItem('semco_vendors')) || [];
                     
-                    // Push unsynced local vendors to server
+                    // Push unsynced local vendors to server (only if they don't exist on server at all, either active or archived)
                     for (const lv of localVendors) {
                         if (lv.id && lv.id.startsWith('VND') && !serverVendors.some(sv => sv.id === lv.id)) {
                             console.log(`[Sync] Uploading local vendor to server: ${lv.name}`);
@@ -4732,22 +4735,28 @@
                         }
                     }
                     
-                    // Re-fetch and update local cache
+                    // Re-fetch and update local cache with complete active + archived set
                     const updatedRes = await fetch(`${API_URL}/vendors`);
                     const updatedJson = await updatedRes.json();
-                    if (updatedJson.success) {
-                        localStorage.setItem('semco_vendors', JSON.stringify(updatedJson.data));
+                    const updatedArchivedRes = await fetch(`${API_URL}/vendors/archived`);
+                    const updatedArchivedJson = await updatedArchivedRes.json();
+                    if (updatedJson.success && updatedArchivedJson.success) {
+                        const allVendors = [...updatedJson.data, ...updatedArchivedJson.data];
+                        localStorage.setItem('semco_vendors', JSON.stringify(allVendors));
                     }
                 }
 
                 // 2. Sync Transporters
                 const serverTransportersRes = await fetch(`${API_URL}/transporters`);
                 const serverTransportersJson = await serverTransportersRes.json();
-                if (serverTransportersJson.success && Array.isArray(serverTransportersJson.data)) {
-                    const serverTransporters = serverTransportersJson.data;
+                const serverTArchivedRes = await fetch(`${API_URL}/transporters/archived`);
+                const serverTArchivedJson = await serverTArchivedRes.json();
+
+                if (serverTransportersJson.success && serverTArchivedJson.success && Array.isArray(serverTransportersJson.data) && Array.isArray(serverTArchivedJson.data)) {
+                    const serverTransporters = [...serverTransportersJson.data, ...serverTArchivedJson.data];
                     const localTransporters = JSON.parse(localStorage.getItem('semco_transporters')) || [];
                     
-                    // Push unsynced local transporters to server
+                    // Push unsynced local transporters to server (only if they don't exist on server at all, either active or archived)
                     for (const lt of localTransporters) {
                         if (lt.id && lt.id.startsWith('TRP') && !serverTransporters.some(st => st.id === lt.id)) {
                             console.log(`[Sync] Uploading local transporter to server: ${lt.name}`);
@@ -4759,11 +4768,14 @@
                         }
                     }
                     
-                    // Re-fetch and update local cache
+                    // Re-fetch and update local cache with complete active + archived set
                     const updatedRes = await fetch(`${API_URL}/transporters`);
                     const updatedJson = await updatedRes.json();
-                    if (updatedJson.success) {
-                        localStorage.setItem('semco_transporters', JSON.stringify(updatedJson.data));
+                    const updatedArchivedRes = await fetch(`${API_URL}/transporters/archived`);
+                    const updatedArchivedJson = await updatedArchivedRes.json();
+                    if (updatedJson.success && updatedArchivedJson.success) {
+                        const allTransporters = [...updatedJson.data, ...updatedArchivedJson.data];
+                        localStorage.setItem('semco_transporters', JSON.stringify(allTransporters));
                     }
                 }
 
