@@ -4186,7 +4186,7 @@
             const iconContainer = document.getElementById('custom-alert-icon-container');
 
             titleEl.textContent = title || "Notification";
-            msgEl.textContent = message || "";
+            msgEl.innerHTML = message || "";
             activeAlertCallback = callback;
 
             const msgLower = (message || "").toLowerCase();
@@ -4292,7 +4292,7 @@
             const okBtn = document.getElementById('custom-confirm-btn-ok');
 
             titleEl.textContent = title || "Confirm Action";
-            msgEl.textContent = message || "";
+            msgEl.innerHTML = message || "";
             activeConfirmCallback = onConfirm;
             activeCancelCallback = onCancel;
 
