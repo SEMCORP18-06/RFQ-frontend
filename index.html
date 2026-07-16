@@ -4791,28 +4791,6 @@
                 if (serverRFQsJson.success && Array.isArray(serverRFQsJson.data)) {
                     const serverRFQs = serverRFQsJson.data;
                     localStorage.setItem('semco_rfqs', JSON.stringify(serverRFQs));
-
-                    // Fetch details of each RFQ to update items & distributions cache
-                    let localItems = [];
-                    let localDists = [];
-                    for (const rfq of serverRFQs) {
-                        try {
-                            const rfqDetailsRes = await fetch(`${API_URL}/rfqs/${rfq.id}`);
-                            const rfqDetailsJson = await rfqDetailsRes.json();
-                            if (rfqDetailsJson.success && rfqDetailsJson.data) {
-                                if (Array.isArray(rfqDetailsJson.data.items)) {
-                                    localItems = localItems.concat(rfqDetailsJson.data.items);
-                                }
-                                if (Array.isArray(rfqDetailsJson.data.distributions)) {
-                                    localDists = localDists.concat(rfqDetailsJson.data.distributions);
-                                }
-                            }
-                        } catch (err) {
-                            console.error(`Error syncing RFQ ${rfq.id} details:`, err);
-                        }
-                    }
-                    localStorage.setItem('semco_items', JSON.stringify(localItems));
-                    localStorage.setItem('semco_distributions', JSON.stringify(localDists));
                 }
 
                 // 4. Sync Transport Requests
@@ -4821,27 +4799,6 @@
                 if (serverTransportRequestsJson.success && Array.isArray(serverTransportRequestsJson.data)) {
                     const serverRequests = serverTransportRequestsJson.data;
                     localStorage.setItem('semco_transport_requests', JSON.stringify(serverRequests));
-
-                    let localTItems = [];
-                    let localTDists = [];
-                    for (const req of serverRequests) {
-                        try {
-                            const reqDetailsRes = await fetch(`${API_URL}/transport-requests/${req.id}`);
-                            const reqDetailsJson = await reqDetailsRes.json();
-                            if (reqDetailsJson.success && reqDetailsJson.data) {
-                                if (Array.isArray(reqDetailsJson.data.items)) {
-                                    localTItems = localTItems.concat(reqDetailsJson.data.items);
-                                }
-                                if (Array.isArray(reqDetailsJson.data.distributions)) {
-                                    localTDists = localTDists.concat(reqDetailsJson.data.distributions);
-                                }
-                            }
-                        } catch (err) {
-                            console.error(`Error syncing Transport Request ${req.id} details:`, err);
-                        }
-                    }
-                    localStorage.setItem('semco_transport_items', JSON.stringify(localTItems));
-                    localStorage.setItem('semco_transport_distributions', JSON.stringify(localTDists));
                 }
 
                 // 5. Sync Submissions & Quotes
@@ -6310,10 +6267,43 @@
 
         async function refreshVendorDashboard() {
             try {
-                // Find vendor details
-                const vendorsList = await getVendors();
-                const v = vendorsList.find(x => x.id === currentVendorId);
+                // Fetch vendor details and distributions in parallel to minimize roundtrips
+                let vendorsList = [];
+                let distributions = [];
                 
+                if (serverMode) {
+                    const [vRes, distsRes] = await Promise.all([
+                        getVendors().catch(() => []),
+                        fetch(`${API_URL}/vendor-portal/distributions/${currentVendorId}`).then(r => r.json()).catch(() => ({ success: false }))
+                    ]);
+                    vendorsList = vRes;
+                    if (distsRes && distsRes.success) {
+                        distributions = distsRes.data;
+                    }
+                } else {
+                    const [vRes, rfqs] = await Promise.all([
+                        getVendors().catch(() => []),
+                        getRFQs().catch(() => [])
+                    ]);
+                    vendorsList = vRes;
+                    const distsDb = JSON.parse(localStorage.getItem('semco_distributions')) || [];
+                    distsDb.forEach(d => {
+                        if (d.vendor_id === currentVendorId) {
+                            const r = rfqs.find(rfq => rfq.id === d.rfq_id);
+                            distributions.push({
+                                ...d,
+                                rfq_number: r ? r.rfq_number : 'RFQ-XXX',
+                                project_name: r ? r.project_name : 'N/A',
+                                rfq_date: r ? r.rfq_date : '-',
+                                available_from: r ? r.available_from : '',
+                                available_to: r ? r.available_to : '',
+                                delivery_date: r ? r.delivery_date : ''
+                            });
+                        }
+                    });
+                }
+
+                const v = vendorsList.find(x => x.id === currentVendorId);
                 if (v) {
                     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
                     setVal('v-dash-name', v.name);
@@ -6333,37 +6323,6 @@
 
                     const ratingEl = document.getElementById('v-dash-rating');
                     if (ratingEl) ratingEl.textContent = `${v.rating || '4.0'}/5`;
-                }
-
-                // Calculate RFQ stats
-                let distributions = [];
-                if (serverMode) {
-                    try {
-                        const distsRes = await fetch(`${API_URL}/vendor-portal/distributions/${currentVendorId}`);
-                        const distsJson = await distsRes.json();
-                        if (distsJson.success) {
-                            distributions = distsJson.data;
-                        }
-                    } catch (err) {
-                        console.error("Error loading vendor portal distributions:", err);
-                    }
-                } else {
-                    const rfqs = await getRFQs();
-                    const distsDb = JSON.parse(localStorage.getItem('semco_distributions')) || [];
-                    distsDb.forEach(d => {
-                        if (d.vendor_id === currentVendorId) {
-                            const r = rfqs.find(rfq => rfq.id === d.rfq_id);
-                            distributions.push({
-                                ...d,
-                                rfq_number: r ? r.rfq_number : 'RFQ-XXX',
-                                project_name: r ? r.project_name : 'N/A',
-                                rfq_date: r ? r.rfq_date : '-',
-                                available_from: r ? r.available_from : '',
-                                available_to: r ? r.available_to : '',
-                                delivery_date: r ? r.delivery_date : ''
-                            });
-                        }
-                    });
                 }
 
                 const total = distributions.filter(d => d.sent_at || d.status === 'Submitted').length;
@@ -6390,10 +6349,9 @@
                     }
                 };
 
-                // Render Active (Pending) RFQs list table
+                // Render Active (Pending) RFQs list table without clearing layout beforehand
                 const tbody = document.getElementById('vendor-dashboard-rfqs-tbody');
                 if (tbody) {
-                    tbody.innerHTML = '';
                     const activeDists = distributions.filter(d => 
                         (d.sent_at || d.status === 'Opened' || d.status === 'Sent') && 
                         d.status !== 'Submitted' && 
@@ -6401,11 +6359,11 @@
                         d.status !== 'Expired' && 
                         !(d.available_to && new Date() > new Date(d.available_to))
                     );
+                    let activeHtml = '';
                     if (activeDists.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No active sourcing requests found.</td></tr>`;
+                        activeHtml = `<tr><td colspan="6" class="text-muted py-3">No active sourcing requests found.</td></tr>`;
                     } else {
                         activeDists.forEach(d => {
-                            const tr = document.createElement('tr');
                             let badgeClass = 'badge-sent';
                             if (d.status === 'Opened') badgeClass = 'badge-opened';
 
@@ -6416,34 +6374,33 @@
 
                             const btnHTML = `<button class="btn btn-sm btn-primary py-1 px-3 fs-9" onclick="switchTab('panel-vendor-portal', '${d.token}')"><i class="fa-solid fa-pen-to-square me-1"></i> Open & Edit</button>`;
 
-                            tr.innerHTML = `
+                            activeHtml += `<tr>
                                 <td class="text-primary fw-bold">${d.rfq_number}</td>
                                 <td class="fw-semibold text-dark text-start">${d.project_name}</td>
                                 <td class="text-secondary">${windowText}</td>
                                 <td class="text-secondary">${deliveryText}</td>
                                 <td><span class="status-badge ${badgeClass}">${d.status}</span></td>
                                 <td>${btnHTML}</td>
-                            `;
-                            tbody.appendChild(tr);
+                            </tr>`;
                         });
                     }
+                    tbody.innerHTML = activeHtml;
                 }
 
-                // Render Submitted / Closed Bids list table
+                // Render Submitted / Closed Bids list table without clearing layout beforehand
                 const submittedTbody = document.getElementById('vendor-dashboard-submitted-tbody');
                 if (submittedTbody) {
-                    submittedTbody.innerHTML = '';
                     const submittedDists = distributions.filter(d => 
                         d.status === 'Submitted' || 
                         d.status === 'Closed' || 
                         d.status === 'Expired' || 
                         (d.available_to && new Date() > new Date(d.available_to))
                     );
+                    let submittedHtml = '';
                     if (submittedDists.length === 0) {
-                        submittedTbody.innerHTML = `<tr><td colspan="7" class="text-muted py-3">No submitted bids found.</td></tr>`;
+                        submittedHtml = `<tr><td colspan="7" class="text-muted py-3">No submitted bids found.</td></tr>`;
                     } else {
                         submittedDists.forEach(d => {
-                            const tr = document.createElement('tr');
                             let badgeClass = 'badge-submitted';
                             let statusText = d.status;
                             let btnHTML = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" onclick="switchTab('panel-vendor-portal', '${d.token}')"><i class="fa-solid fa-eye me-1"></i> View Bid</button>`;
@@ -6492,7 +6449,7 @@
                                 }
                             }
 
-                            tr.innerHTML = `
+                            submittedHtml += `<tr>
                                 <td class="text-primary fw-bold">${d.rfq_number}</td>
                                 <td class="fw-semibold text-dark text-start">${d.project_name}</td>
                                 <td class="text-secondary">${windowText}</td>
@@ -6500,10 +6457,10 @@
                                 <td>${rankHtml}</td>
                                 <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
                                 <td>${btnHTML}</td>
-                            `;
-                            submittedTbody.appendChild(tr);
+                            </tr>`;
                         });
                     }
+                    submittedTbody.innerHTML = submittedHtml;
                 }
 
             } catch (err) {
