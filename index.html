@@ -14396,7 +14396,7 @@
             let data;
             try {
                 if (serverMode) {
-                    const res = await fetch(`${API_URL}/transporter-portal/verify?token=${token}`);
+                    const res = await fetch(`${API_URL}/transporter-portal/verify?token=${encodeURIComponent(token)}`);
                     const json = await res.json();
                     if (json.success) {
                         data = json.data;
