@@ -6857,18 +6857,19 @@
 
         async function refreshAllSubmissions() {
             const tbody = document.getElementById('submissions-explorer-tbody');
-            if (tbody) {
+            const hadRows = tbody && tbody.children.length > 0 && !tbody.querySelector('.fa-spinner');
+
+            if (tbody && !hadRows) {
                 tbody.innerHTML = `<tr><td colspan="16" class="text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading quotations...</td></tr>`;
             }
 
             try {
+                let newData = [];
                 if (serverMode) {
                     const res = await fetch(`${API_URL}/submissions`);
                     const json = await res.json();
                     if (json.success) {
-                        globalSubmissionsData = json.data;
-                    } else {
-                        globalSubmissionsData = [];
+                        newData = json.data;
                     }
                 } else {
                     // Offline / Simulated Mode Join logic
@@ -6916,11 +6917,18 @@
                             });
                         }
                     });
-                    globalSubmissionsData = joined;
+                    newData = joined;
                 }
 
-                populateSubmissionsFilters();
-                filterAllSubmissions();
+                // Check if data actually changed
+                const hashBefore = JSON.stringify(globalSubmissionsData);
+                const hashAfter = JSON.stringify(newData);
+
+                if (hashBefore !== hashAfter || !hadRows) {
+                    globalSubmissionsData = newData;
+                    populateSubmissionsFilters();
+                    filterAllSubmissions();
+                }
 
             } catch (err) {
                 console.error("Error loading all submissions:", err);
