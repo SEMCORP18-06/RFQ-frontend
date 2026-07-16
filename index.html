@@ -3400,11 +3400,12 @@
                     <p class="text-secondary fs-8">Please wait while we establish a secure connection to your bidding workspace.</p>
                 </div>
 
-                <div class="dashboard-card mb-4" id="t-portal-error-card" style="display: none;">
-                    <div class="alert alert-danger mb-0">
-                        <h6 class="fw-bold"><i class="fa-solid fa-circle-xmark me-2"></i>Access Restriction</h6>
-                        <p class="mb-0" id="t-portal-error-message">This request link is invalid or has expired.</p>
-                    </div>
+                <div class="text-center py-5 px-4" id="t-portal-error-card" style="display: none;">
+                    <div class="mb-3" style="font-size:3rem; color:#dc2626;"><i class="fa-solid fa-circle-xmark"></i></div>
+                    <h5 class="fw-bold text-dark mb-2" id="t-portal-error-title">Access Denied</h5>
+                    <p class="text-secondary fs-8 mb-2" id="t-portal-error-message">This request link is invalid or has expired.</p>
+                    <p class="text-muted fs-9 mb-1" id="t-portal-error-deadline" style="display:none;"></p>
+                    <p class="text-muted fs-9 mt-3">If you believe this is an error, please ask the admin to extend or re-open the bidding window.</p>
                 </div>
 
                 <div class="dashboard-card mb-4" id="t-portal-main-card" style="display:none;">
@@ -4656,44 +4657,61 @@
         const defaultNotifications = [];
 
         // Core App Initialization Check
+        let _connectionChecked = false;
         async function checkServerConnection() {
-            const isDeployed = window.location.hostname && 
-                               window.location.hostname !== 'localhost' && 
+            // Cache result — if already confirmed, skip repeat check (e.g. called twice during startup)
+            if (_connectionChecked) return;
+
+            const isDeployed = window.location.hostname &&
+                               window.location.hostname !== 'localhost' &&
                                window.location.hostname !== '127.0.0.1';
-            
-            let attempts = 3;
+
+            // Fast-path: if this page was opened via a direct email link (token/transport_token),
+            // skip the connection probe entirely. The verify API call that follows will confirm
+            // reachability. This removes one unnecessary round-trip and cuts load time by 3-10s.
+            const _initParams = new URLSearchParams(window.location.search);
+            if (_initParams.has('token') || _initParams.has('transport_token') ||
+                _initParams.has('onboard_token') || _initParams.has('register_token')) {
+                serverMode = true;
+                _connectionChecked = true;
+                console.log('[Connection] Direct token link detected — skipping connection probe, assuming server mode.');
+                document.getElementById('server-mode-indicator').className = 'badge-live-server';
+                document.getElementById('server-status-text').textContent = 'Live Express Server';
+                return;
+            }
+
+            // Normal admin login path: use /api/health (lightweight) instead of /api/vendors (full DB read)
+            let attempts = 2;
             let success = false;
-            
+
             while (attempts > 0 && !success) {
                 try {
-                    const response = await fetch(`${API_URL}/vendors`, { 
-                        method: 'GET', 
-                        signal: AbortSignal.timeout(10000) 
+                    const response = await fetch(`${API_URL}/health`, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(6000)
                     });
                     if (response.ok) {
                         success = true;
                     } else {
                         attempts--;
-                        if (attempts > 0) {
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                        }
+                        if (attempts > 0) await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 } catch (e) {
                     console.warn(`[Connection] Attempt to connect to server failed. Retries left: ${attempts - 1}`, e);
                     attempts--;
-                    if (attempts > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 1500)); // wait 1.5s before retry
-                    }
+                    if (attempts > 0) await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
 
             if (success) {
                 serverMode = true;
+                _connectionChecked = true;
                 document.getElementById('server-mode-indicator').className = "badge-live-server";
                 document.getElementById('server-status-text').textContent = "Live Express Server";
                 console.log("[Connection] Active server found. Using Express + MongoDB Backend API.");
                 await syncLocalAndServerData();
             } else {
+                _connectionChecked = true;
                 if (isDeployed) {
                     // Force serverMode = true on production even if server connection failed temporarily
                     serverMode = true;
@@ -10384,14 +10402,19 @@
             let details;
 
             // Helper: show a clear error message inside the loading card
-            function showPortalError(msg) {
+            function showPortalError(msg, availableTo) {
                 if (loadingCard) {
+                    const isExpiredMsg = msg && (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('closed'));
+                    const deadlineHtml = isExpiredMsg && availableTo
+                        ? `<p class="text-muted fs-9 mt-1 mb-0"><strong>Deadline was:</strong> ${new Date(availableTo).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>`
+                        : '';
                     loadingCard.innerHTML = `
                         <div class="text-center py-5 px-4">
                             <div class="mb-3" style="font-size:3rem; color:#dc2626;"><i class="fa-solid fa-circle-xmark"></i></div>
-                            <h5 class="fw-bold text-dark mb-2">Access Denied</h5>
-                            <p class="text-secondary fs-8 mb-4">${msg || 'Unable to access this RFQ portal. Please contact the administrator.'}</p>
-                            <p class="text-muted fs-9">If you believe this is an error, ask the admin to resend the invitation link.</p>
+                            <h5 class="fw-bold text-dark mb-2">${isExpiredMsg ? 'Bidding Window Closed' : 'Access Denied'}</h5>
+                            <p class="text-secondary fs-8 mb-2">${msg || 'Unable to access this RFQ portal. Please contact the administrator.'}</p>
+                            ${deadlineHtml}
+                            <p class="text-muted fs-9 mt-3">If you believe this is an error, please ask the admin to extend or re-open the bidding window.</p>
                         </div>`;
                     loadingCard.classList.remove('d-none');
                 }
@@ -10408,7 +10431,7 @@
                         return;
                     }
                     if (!json.success) {
-                        showPortalError(json.message || 'Invalid or expired access link.');
+                        showPortalError(json.message || 'Invalid or expired access link.', json.available_to);
                         return;
                     }
                     details = json.data;
@@ -14600,7 +14623,15 @@
                         if (loadingCard) loadingCard.classList.add('d-none');
                         mainCard.style.display = 'none';
                         errorCard.style.display = 'block';
+                        const isExpiredMsg = json.message && (json.message.toLowerCase().includes('expired') || json.message.toLowerCase().includes('closed'));
+                        const errTitle = document.getElementById('t-portal-error-title');
+                        const errDeadline = document.getElementById('t-portal-error-deadline');
+                        if (errTitle) errTitle.textContent = isExpiredMsg ? 'Bidding Window Closed' : 'Access Denied';
                         if (errorMsg) errorMsg.textContent = json.message || 'Invalid or expired token.';
+                        if (errDeadline && isExpiredMsg && json.available_to) {
+                            errDeadline.textContent = 'Deadline was: ' + new Date(json.available_to).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+                            errDeadline.style.display = 'block';
+                        }
                         return;
                     }
                 } else {
