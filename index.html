@@ -2138,7 +2138,6 @@
                                         <th>Est. Savings Achieved</th>
                                         <th>Advantage vs Avg</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="combined-comparative-tbody">
@@ -11364,7 +11363,7 @@
             const prevSelectedVal = selectEl.value;
             const hadOptions = selectEl.options.length > 0;
             
-            const eligibleRFQs = rfqs.filter(r => r.status === 'Submitted' || r.status === 'In Progress' || r.status === 'Sent');
+            const eligibleRFQs = rfqs.filter(r => r.status !== 'Draft');
             
             // Generate option values signature to see if the list of RFQs actually changed
             const currentOptionVals = Array.from(selectEl.options).map(o => o.value).join(',');
@@ -11489,17 +11488,17 @@
                 }
 
                 tr.innerHTML = `
-                    <td class="text-primary fw-bold fs-9">${r.rfq_number}</td>
+                    <td class="text-primary fw-bold fs-9">
+                        <a href="#" onclick="drillDownRFQ('${r.id}'); return false;" class="text-decoration-none fw-bold"><i class="fa-solid fa-magnifying-glass-chart me-1"></i>${r.rfq_number}</a>
+                    </td>
                     <td class="fw-bold">${r.project_name}</td>
+                    <td><span class="badge bg-secondary font-normal fs-8">${r.department || 'Procurement'}</span></td>
                     <td>${l1Vendor}</td>
                     <td class="text-success fw-bold">${l1Value}</td>
                     <td>${l2Vendor}</td>
                     <td>${savings}</td>
                     <td>${advantage}</td>
                     <td><span class="status-badge badge-${r.status.toLowerCase().replace(' ', '')}">${r.status}</span></td>
-                    <td class="text-center">
-                        <button class="btn btn-xs btn-outline-primary" onclick="drillDownRFQ('${r.id}')"><i class="fa-solid fa-magnifying-glass-chart"></i> View Matrix</button>
-                    </td>
                 `;
                 tbody.appendChild(tr);
             });
