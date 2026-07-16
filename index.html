@@ -1780,13 +1780,14 @@
                                                 <th>Project Name</th>
                                                 <th>Submission Window</th>
                                                 <th>Expected Delivery Date</th>
+                                                <th>Live Rank</th>
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="vendor-dashboard-submitted-tbody">
                                             <tr>
-                                                <td colspan="6" class="text-muted py-3">No submitted bids found.</td>
+                                                <td colspan="7" class="text-muted py-3">No submitted bids found.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -3374,13 +3375,14 @@
                                                 <th>Route (From → To)</th>
                                                 <th>Required Delivery Date</th>
                                                 <th>Bidding Deadline</th>
+                                                <th>Live Rank</th>
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="t-dash-submitted-tbody">
                                             <tr>
-                                                <td colspan="6" class="text-muted py-3">No submitted bids found.</td>
+                                                <td colspan="7" class="text-muted py-3">No submitted bids found.</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -6380,7 +6382,7 @@
                         (d.available_to && new Date() > new Date(d.available_to))
                     );
                     if (submittedDists.length === 0) {
-                        submittedTbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No submitted bids found.</td></tr>`;
+                        submittedTbody.innerHTML = `<tr><td colspan="7" class="text-muted py-3">No submitted bids found.</td></tr>`;
                     } else {
                         submittedDists.forEach(d => {
                             const tr = document.createElement('tr');
@@ -6400,11 +6402,44 @@
                             const windowText = `${windowFrom} to ${windowTo}`;
                             const deliveryText = formatDate(d.delivery_date);
 
+                            // Render Rank cell
+                            let rankHtml = '<span class="text-muted">—</span>';
+                            if (!serverMode) {
+                                const allDists = JSON.parse(localStorage.getItem('semco_distributions')) || [];
+                                const submittedDists = allDists
+                                    .filter(x => x.rfq_id === d.rfq_id && x.status === 'Submitted')
+                                    .sort((a, b) => (parseFloat(a.final_cost) || 0) - (parseFloat(b.final_cost) || 0));
+
+                                const totalBids = submittedDists.length;
+                                if (totalBids >= 2) {
+                                    const idx = submittedDists.findIndex(x => x.vendor_id === currentVendorId);
+                                    if (idx !== -1) {
+                                        const l1Badge = idx === 0 
+                                            ? '<span class="badge bg-success ms-1 fs-9">L1</span>' 
+                                            : '<span class="badge bg-warning text-dark ms-1 fs-9">Not L1</span>';
+                                        rankHtml = `<span class="fw-bold text-dark">#${idx + 1}</span> <span class="text-muted">of ${totalBids}</span> ${l1Badge}`;
+                                    }
+                                } else if (d.status === 'Submitted') {
+                                    rankHtml = '<span class="text-secondary fs-9" title="Requires minimum 2 bids for live rankings">Pending (min 2 bids)</span>';
+                                }
+                            } else {
+                                const rankingInfo = d.ranking || null;
+                                if (rankingInfo) {
+                                    const l1Badge = rankingInfo.is_l1 
+                                        ? '<span class="badge bg-success ms-1 fs-9">L1</span>' 
+                                        : '<span class="badge bg-warning text-dark ms-1 fs-9">Not L1</span>';
+                                    rankHtml = `<span class="fw-bold text-dark">#${rankingInfo.rank}</span> <span class="text-muted">of ${rankingInfo.total_bids}</span> ${l1Badge}`;
+                                } else if (d.status === 'Submitted') {
+                                    rankHtml = '<span class="text-secondary fs-9" title="Requires minimum 2 bids for live rankings">Pending (min 2 bids)</span>';
+                                }
+                            }
+
                             tr.innerHTML = `
                                 <td class="text-primary fw-bold">${d.rfq_number}</td>
                                 <td class="fw-semibold text-dark text-start">${d.project_name}</td>
                                 <td class="text-secondary">${windowText}</td>
                                 <td class="text-secondary">${deliveryText}</td>
+                                <td>${rankHtml}</td>
                                 <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
                                 <td>${btnHTML}</td>
                             `;
@@ -14407,25 +14442,11 @@
                 const allDists = distributions.filter(d => d.status !== 'Draft');
 
                 // Helper to render a row
-                function renderRow(d) {
-                    let badgeClass = 'badge-sent';
+                function renderActiveRow(d) {
+                    let badgeClass = d.status === 'Opened' ? 'badge-opened' : 'badge-sent';
                     let statusLabel = d.status;
-                    let actionsHtml = '';
-                    const isExpired = d.status === 'Expired' || d.request_status === 'Closed' || d.request_status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at));
-
-                    if (isExpired && d.status !== 'Submitted') {
-                        badgeClass = 'badge-closed';
-                        statusLabel = d.request_status === 'Closed' ? 'Closed' : 'Expired';
-                        actionsHtml = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" disabled><i class="fa-solid fa-lock me-1"></i> Closed</button>`;
-                    } else if (d.status === 'Submitted') {
-                        badgeClass = 'badge-submitted';
-                        statusLabel = 'Submitted';
-                        actionsHtml = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" onclick="switchTab('panel-transporter-portal', '${d.token}')"><i class="fa-solid fa-eye me-1"></i> View Bid</button>`;
-                    } else {
-                        badgeClass = d.status === 'Opened' ? 'badge-opened' : 'badge-sent';
-                        actionsHtml = `<button class="btn btn-sm btn-primary py-1 px-3 fs-9" onclick="switchTab('panel-transporter-portal', '${d.token}')"><i class="fa-solid fa-pen-to-square me-1"></i> Open & Edit</button>`;
-                    }
-
+                    let actionsHtml = `<button class="btn btn-sm btn-primary py-1 px-3 fs-9" onclick="switchTab('panel-transporter-portal', '${d.token}')"><i class="fa-solid fa-pen-to-square me-1"></i> Open & Edit</button>`;
+                    
                     let expText = '-';
                     if (d.expires_at) {
                         expText = new Date(d.expires_at).toLocaleString();
@@ -14443,6 +14464,68 @@
                     `;
                 }
 
+                function renderSubmittedRow(d) {
+                    let badgeClass = 'badge-submitted';
+                    let statusLabel = 'Submitted';
+                    let actionsHtml = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" onclick="switchTab('panel-transporter-portal', '${d.token}')"><i class="fa-solid fa-eye me-1"></i> View Bid</button>`;
+                    const isExpired = d.status === 'Expired' || d.request_status === 'Closed' || d.request_status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at));
+
+                    if (isExpired && d.status !== 'Submitted') {
+                        badgeClass = 'badge-closed';
+                        statusLabel = d.request_status === 'Closed' ? 'Closed' : 'Expired';
+                        actionsHtml = `<button class="btn btn-sm btn-outline-secondary py-1 px-3 fs-9" disabled><i class="fa-solid fa-lock me-1"></i> Closed</button>`;
+                    }
+
+                    let expText = '-';
+                    if (d.expires_at) {
+                        expText = new Date(d.expires_at).toLocaleString();
+                    }
+
+                    // Render Rank cell
+                    let rankHtml = '<span class="text-muted">—</span>';
+                    if (!serverMode) {
+                        const allDists = JSON.parse(localStorage.getItem('semco_transport_distributions')) || [];
+                        const submittedDists = allDists
+                            .filter(x => x.request_id === d.request_id && x.status === 'Submitted')
+                            .sort((a, b) => (parseFloat(a.final_cost) || 0) - (parseFloat(b.final_cost) || 0));
+
+                        const totalBids = submittedDists.length;
+                        if (totalBids >= 2) {
+                            const idx = submittedDists.findIndex(x => x.transporter_id === currentTransporterId);
+                            if (idx !== -1) {
+                                const l1Badge = idx === 0 
+                                    ? '<span class="badge bg-success ms-1 fs-9">L1</span>' 
+                                    : '<span class="badge bg-warning text-dark ms-1 fs-9">Not L1</span>';
+                                rankHtml = `<span class="fw-bold text-dark">#${idx + 1}</span> <span class="text-muted">of ${totalBids}</span> ${l1Badge}`;
+                            }
+                        } else if (d.status === 'Submitted') {
+                            rankHtml = '<span class="text-secondary fs-9" title="Requires minimum 2 bids for live rankings">Pending (min 2 bids)</span>';
+                        }
+                    } else {
+                        const rankingInfo = d.ranking || null;
+                        if (rankingInfo) {
+                            const l1Badge = rankingInfo.is_l1 
+                                ? '<span class="badge bg-success ms-1 fs-9">L1</span>' 
+                                : '<span class="badge bg-warning text-dark ms-1 fs-9">Not L1</span>';
+                            rankHtml = `<span class="fw-bold text-dark">#${rankingInfo.rank}</span> <span class="text-muted">of ${rankingInfo.total_bids}</span> ${l1Badge}`;
+                        } else if (d.status === 'Submitted') {
+                            rankHtml = '<span class="text-secondary fs-9" title="Requires minimum 2 bids for live rankings">Pending (min 2 bids)</span>';
+                        }
+                    }
+
+                    return `
+                        <tr>
+                            <td class="text-primary fw-bold">${d.request_number}</td>
+                            <td class="fw-semibold text-dark text-start">${d.from_location} → ${d.to_location}</td>
+                            <td class="text-secondary">${d.required_date}</td>
+                            <td class="text-secondary">${expText}</td>
+                            <td>${rankHtml}</td>
+                            <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
+                            <td>${actionsHtml}</td>
+                        </tr>
+                    `;
+                }
+
                 // Render Active Requests table
                 const tbody = document.getElementById('t-dash-requests-tbody');
                 if (tbody) {
@@ -14451,7 +14534,7 @@
                     if (activeDists.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No active transport bid requests found.</td></tr>`;
                     } else {
-                        activeDists.forEach(d => { tbody.innerHTML += renderRow(d); });
+                        activeDists.forEach(d => { tbody.innerHTML += renderActiveRow(d); });
                     }
                 }
 
@@ -14461,9 +14544,9 @@
                     submittedTbody.innerHTML = '';
                     const submittedDists = allDists.filter(d => d.status === 'Submitted' || d.status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at) && d.status !== 'Submitted'));
                     if (submittedDists.length === 0) {
-                        submittedTbody.innerHTML = `<tr><td colspan="6" class="text-muted py-3">No submitted bids found.</td></tr>`;
+                        submittedTbody.innerHTML = `<tr><td colspan="7" class="text-muted py-3">No submitted bids found.</td></tr>`;
                     } else {
-                        submittedDists.forEach(d => { submittedTbody.innerHTML += renderRow(d); });
+                        submittedDists.forEach(d => { submittedTbody.innerHTML += renderSubmittedRow(d); });
                     }
                 }
 
