@@ -23,7 +23,7 @@
         })();
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SEMCO Smart RFQ - Enterprise Procurement Platform</title>
     
     <!-- External CSS & Libraries via CDN -->
@@ -221,26 +221,25 @@
             transition: background-color var(--transition-speed), color var(--transition-speed);
         }
 
-        /* Sidebar Navigation styling - Mobile-first (hidden off-screen by default) */
+        /* Sidebar Navigation styling */
         #sidebar {
             width: 260px;
             background-color: var(--sidebar-bg);
             color: var(--sidebar-text);
             min-height: 100vh;
             position: fixed;
-            left: -260px;
+            left: 0;
             top: 0;
             z-index: 1000;
             transition: all var(--transition-speed) ease;
-            box-shadow: none;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             border-right: 1px solid var(--border-color);
         }
 
-        #sidebar:not(.collapsed) {
-            left: 0;
-            box-shadow: 6px 0 25px rgba(0,0,0,0.15);
+        #sidebar.collapsed {
+            left: -260px;
         }
 
         .sidebar-brand {
@@ -411,17 +410,22 @@
             box-shadow: 0 6px 16px rgba(232, 109, 124, 0.3) !important;
         }
 
-        /* Content Wrapper Grid - Mobile-first (full-width by default) */
+        /* Content Wrapper Grid */
         #content-wrapper {
             flex-grow: 1;
-            margin-left: 0;
+            margin-left: 260px;
             transition: all var(--transition-speed) ease;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             min-width: 0;
-            width: 100%;
+            width: calc(100% - 260px);
             max-width: 100%;
+        }
+
+        #content-wrapper.expanded {
+            margin-left: 0;
+            width: 100%;
         }
 
         /* Header CSS */
@@ -678,6 +682,59 @@
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.02), rgba(16, 185, 129, 0.08));
         }
 
+        /* Chat UI styling for AI Copilot */
+        .chat-container {
+            height: 420px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+            padding: 1rem;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .chat-message.user {
+            margin-left: auto;
+            align-items: flex-end;
+        }
+
+        .chat-message.bot {
+            margin-right: auto;
+            align-items: flex-start;
+        }
+
+        .chat-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .chat-message.user .chat-bubble {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.bot .chat-bubble {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-meta {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
 
         /* Notification Dropdown layout */
         .notification-dropdown {
@@ -846,7 +903,7 @@
             height: 100vh;
             background: radial-gradient(circle at 10% 20%, #fdfbf7 0%, #e8f0fe 100%);
             z-index: 9999;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             overflow-y: auto;
@@ -1237,61 +1294,25 @@
             color: var(--accent-orange) !important;
         }
 
-        /* Mobile-first Touch Target Sizing (minimum 48x48px target compliance) */
-        input:not([type="checkbox"]):not([type="radio"]), 
-        select, 
-        .form-control, 
-        .form-select, 
-        .btn, 
-        .sidebar-nav-item a, 
-        .nav-link, 
-        .pagination .page-link,
-        .input-group-text {
-            min-height: 48px !important;
-            min-width: 48px;
-            display: inline-flex !important;
-            align-items: center !important;
-        }
-        
-        .btn {
-            justify-content: center !important;
-        }
-
-        .btn-xs, .btn-sm {
-            padding: 0.35rem 0.75rem !important;
-            font-size: 0.75rem !important;
-        }
-
-        .form-check-input {
-            width: 1.5rem !important;
-            height: 1.5rem !important;
-            cursor: pointer;
-        }
-        .form-check-label {
-            padding-left: 0.5rem;
-            min-height: 48px;
-            display: inline-flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        /* Responsive Containerized Horizontal Table Scrollbar Settings */
-        .table-responsive {
-            display: block;
-            width: 100%;
-            overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        .table-responsive table {
-            width: 100%;
-            margin-bottom: 0;
-        }
-
-        /* Mobile-First Layout Media Overrides */
+        /* Mobile & Tablet Responsiveness */
         @media (max-width: 768px) {
+            #sidebar {
+                left: -260px;
+                box-shadow: none;
+            }
+            #sidebar:not(.collapsed) {
+                left: 0;
+                box-shadow: 6px 0 25px rgba(0,0,0,0.15);
+            }
+            #content-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            #content-wrapper.expanded {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
             header {
                 padding: 0.75rem 1rem !important;
             }
@@ -1306,32 +1327,14 @@
                 background: rgba(15, 23, 42, 0.4);
                 backdrop-filter: blur(2px);
                 z-index: 995;
-                pointer-events: auto;
-            }
-        }
-
-        @media (min-width: 768px) {
-            #sidebar {
-                left: 0 !important;
-                box-shadow: 4px 0 10px rgba(0,0,0,0.05);
-            }
-            #sidebar.collapsed {
-                left: -260px !important;
-            }
-            #content-wrapper {
-                margin-left: 260px !important;
-                width: calc(100% - 260px) !important;
-            }
-            #content-wrapper.expanded {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-            body:has(#sidebar:not(.collapsed))::after {
-                display: none !important;
+                pointer-events: none;
             }
         }
 
         @media (max-width: 767.98px) {
+            .table-responsive {
+                border-radius: 8px;
+            }
             .table th, .table td {
                 white-space: nowrap;
                 padding: 0.6rem 0.8rem !important;
@@ -1358,22 +1361,8 @@
                 width: 90vw !important;
                 max-width: 320px !important;
             }
-            /* Responsive Modals */
             .modal-dialog {
                 margin: 0.5rem !important;
-                max-width: calc(100% - 1rem) !important;
-            }
-            .modal-content {
-                border-radius: 12px !important;
-            }
-            .modal-footer {
-                flex-wrap: nowrap !important;
-                gap: 0.5rem;
-            }
-            .modal-footer .btn {
-                flex: 1 1 0% !important;
-                width: 100% !important;
-                margin: 0 !important;
             }
         }
 
@@ -2232,17 +2221,16 @@
 
                     <!-- L1 Ranking Analysis -->
                     <div class="dashboard-card">
-                        <h6 class="fw-bold border-bottom pb-2 mb-3">Bidder Ranks & Deviations Summary (L1 / L2 / L3)</h6>
+                        <h6 class="fw-bold border-bottom pb-2 mb-3">Bidder Ranks Summary (L1 / L2 / L3)</h6>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle text-center" id="rankings-table">
                                 <thead>
                                     <tr>
                                         <th>Rank</th>
                                         <th>Bidder Name</th>
-                                        <th>All-Inclusive Cost <small class="text-muted fw-normal">(GST + Tax + Transport)</small></th>
-                                        <th>Base Item Total <small class="text-muted fw-normal">(ex-tax)</small></th>
+                                        <th>Calculated Quote (Item Total)</th>
+                                        <th>Final Quoted Cost (Lump Sum)</th>
                                         <th>Avg Lead Time (Days)</th>
-                                        <th>Price Deviation (vs L1)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rankings-tbody">
@@ -2865,8 +2853,6 @@
                         <div class="col-12 col-md-6">
                             <label class="fs-9 fw-bold text-secondary uppercase mb-1 d-block">Sort Submissions</label>
                             <select class="form-select form-select-sm" id="sub-sort-options" onchange="filterAllSubmissions()">
-                                <option value="sent-desc">Date Sent (Newest first)</option>
-                                <option value="sent-asc">Date Sent (Oldest first)</option>
                                 <option value="vendor-asc">Vendor Name (A-Z)</option>
                                 <option value="vendor-desc">Vendor Name (Z-A)</option>
                                 <option value="value-asc">Total Value (Lowest to Highest)</option>
@@ -2883,6 +2869,7 @@
                                 <tr>
                                     <th>RFQ Number</th>
                                     <th>Project Name</th>
+                                    <th>Vendor Partner</th>
                                     <th>MOC</th>
                                     <th>Item Description</th>
                                     <th>Make</th>
@@ -3173,8 +3160,6 @@
                                 <div class="col-12 col-md-6">
                                     <label class="fs-9 fw-bold text-secondary uppercase mb-1 d-block">Sort Submissions</label>
                                     <select class="form-select form-select-sm" id="t-quotes-sort-options" onchange="filterTransportSubmissions()">
-                                        <option value="sent-desc">Date Sent (Newest first)</option>
-                                        <option value="sent-asc">Date Sent (Oldest first)</option>
                                         <option value="transporter-asc">Transporter Name (A-Z)</option>
                                         <option value="transporter-desc">Transporter Name (Z-A)</option>
                                         <option value="value-asc">Total Value (Lowest to Highest)</option>
@@ -3188,6 +3173,7 @@
                                     <thead class="table-dark sticky-top">
                                         <tr>
                                             <th>REQUEST NUMBER</th>
+                                            <th>TRANSPORTER PARTNER</th>
                                             <th>ROUTE (FROM &rarr; TO)</th>
                                             <th>VEHICLE SIZE</th>
                                             <th>TONNAGE</th>
@@ -4082,11 +4068,17 @@
     <!-- CORE LOGIC: PERSISTENCE, API CONTEXT, ROUTING & CHART CREATION -->
     <script>
         // API Base URL
-        const API_URL = (window.location.host && window.location.host.includes('rfq-backend.vercel.app'))
-            ? `${window.location.protocol}//${window.location.host}/api`
-            : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                ? (window.location.port === '5000' ? '/api' : 'http://localhost:5000/api')
-                : 'https://rfq-backend.vercel.app/api';
+        const getDynamicApiUrl = () => {
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || !window.location.hostname;
+            if (isLocal) {
+                if (window.location.protocol === 'file:') {
+                    return 'http://localhost:5000/api';
+                }
+                return `${window.location.protocol}//${window.location.hostname || 'localhost'}:${window.location.port || '5000'}/api`;
+            }
+            return 'https://rfq-backend.vercel.app/api';
+        };
+        const API_URL = getDynamicApiUrl();
         let serverMode = false;
         let currentUser = "Vijay Mehta";
         let currentRole = "Procurement Admin";
@@ -4096,6 +4088,9 @@
         let currentTransporterId = null;
         let currentEditingRfqExcelFilename = "";
         let currentEditingRfqExcelPath = "";
+        let currentSelectedExcelFile = null;
+        let currentSelectedExcelBase64 = null;
+        let currentSelectedExcelParsedSheets = [];
         let vendorPortalTimerInterval = null;
 
         // Custom Alert popup system
@@ -4644,6 +4639,7 @@
                 document.getElementById('server-mode-indicator').className = "badge-live-server";
                 document.getElementById('server-status-text').textContent = "Live Express Server";
                 console.log("[Connection] Active server found. Using Express + MongoDB Backend API.");
+                await syncLocalAndServerData();
             } else {
                 if (isDeployed) {
                     // Force serverMode = true on production even if server connection failed temporarily
@@ -4651,6 +4647,7 @@
                     document.getElementById('server-mode-indicator').className = "badge-live-server bg-danger";
                     document.getElementById('server-status-text').textContent = "Live Server (Connection Error)";
                     console.error("[Connection] Live server could not be reached. Forcing server mode for production.");
+                    await syncLocalAndServerData();
                 } else {
                     serverMode = false;
                     document.getElementById('server-mode-indicator').className = "badge-sim-server";
@@ -4661,9 +4658,204 @@
             }
         }
 
+        // Auto-sync function to download and align local storage data cache with backend database server
+        async function syncLocalAndServerData() {
+            if (!serverMode) return;
+            try {
+                // 1. Sync Vendors
+                const serverVendorsRes = await fetch(`${API_URL}/vendors`);
+                const serverVendorsJson = await serverVendorsRes.json();
+                if (serverVendorsJson.success && Array.isArray(serverVendorsJson.data)) {
+                    const serverVendors = serverVendorsJson.data;
+                    const localVendors = JSON.parse(localStorage.getItem('semco_vendors')) || [];
+                    
+                    // Push unsynced local vendors to server
+                    for (const lv of localVendors) {
+                        if (lv.id && lv.id.startsWith('VND') && !serverVendors.some(sv => sv.id === lv.id)) {
+                            console.log(`[Sync] Uploading local vendor to server: ${lv.name}`);
+                            await fetch(`${API_URL}/vendors`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'x-user': currentUser },
+                                body: JSON.stringify(lv)
+                            });
+                        }
+                    }
+                    
+                    // Re-fetch and update local cache
+                    const updatedRes = await fetch(`${API_URL}/vendors`);
+                    const updatedJson = await updatedRes.json();
+                    if (updatedJson.success) {
+                        localStorage.setItem('semco_vendors', JSON.stringify(updatedJson.data));
+                    }
+                }
+
+                // 2. Sync Transporters
+                const serverTransportersRes = await fetch(`${API_URL}/transporters`);
+                const serverTransportersJson = await serverTransportersRes.json();
+                if (serverTransportersJson.success && Array.isArray(serverTransportersJson.data)) {
+                    const serverTransporters = serverTransportersJson.data;
+                    const localTransporters = JSON.parse(localStorage.getItem('semco_transporters')) || [];
+                    
+                    // Push unsynced local transporters to server
+                    for (const lt of localTransporters) {
+                        if (lt.id && lt.id.startsWith('TRP') && !serverTransporters.some(st => st.id === lt.id)) {
+                            console.log(`[Sync] Uploading local transporter to server: ${lt.name}`);
+                            await fetch(`${API_URL}/transporters`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'x-user': currentUser },
+                                body: JSON.stringify(lt)
+                            });
+                        }
+                    }
+                    
+                    // Re-fetch and update local cache
+                    const updatedRes = await fetch(`${API_URL}/transporters`);
+                    const updatedJson = await updatedRes.json();
+                    if (updatedJson.success) {
+                        localStorage.setItem('semco_transporters', JSON.stringify(updatedJson.data));
+                    }
+                }
+
+                // 3. Sync RFQs
+                const serverRFQsRes = await fetch(`${API_URL}/rfqs`);
+                const serverRFQsJson = await serverRFQsRes.json();
+                if (serverRFQsJson.success && Array.isArray(serverRFQsJson.data)) {
+                    const serverRFQs = serverRFQsJson.data;
+                    localStorage.setItem('semco_rfqs', JSON.stringify(serverRFQs));
+
+                    // Fetch details of each RFQ to update items & distributions cache
+                    let localItems = [];
+                    let localDists = [];
+                    for (const rfq of serverRFQs) {
+                        try {
+                            const rfqDetailsRes = await fetch(`${API_URL}/rfqs/${rfq.id}`);
+                            const rfqDetailsJson = await rfqDetailsRes.json();
+                            if (rfqDetailsJson.success && rfqDetailsJson.data) {
+                                if (Array.isArray(rfqDetailsJson.data.items)) {
+                                    localItems = localItems.concat(rfqDetailsJson.data.items);
+                                }
+                                if (Array.isArray(rfqDetailsJson.data.distributions)) {
+                                    localDists = localDists.concat(rfqDetailsJson.data.distributions);
+                                }
+                            }
+                        } catch (err) {
+                            console.error(`Error syncing RFQ ${rfq.id} details:`, err);
+                        }
+                    }
+                    localStorage.setItem('semco_items', JSON.stringify(localItems));
+                    localStorage.setItem('semco_distributions', JSON.stringify(localDists));
+                }
+
+                // 4. Sync Transport Requests
+                const serverTransportRequestsRes = await fetch(`${API_URL}/transport-requests`);
+                const serverTransportRequestsJson = await serverTransportRequestsRes.json();
+                if (serverTransportRequestsJson.success && Array.isArray(serverTransportRequestsJson.data)) {
+                    const serverRequests = serverTransportRequestsJson.data;
+                    localStorage.setItem('semco_transport_requests', JSON.stringify(serverRequests));
+
+                    let localTItems = [];
+                    let localTDists = [];
+                    for (const req of serverRequests) {
+                        try {
+                            const reqDetailsRes = await fetch(`${API_URL}/transport-requests/${req.id}`);
+                            const reqDetailsJson = await reqDetailsRes.json();
+                            if (reqDetailsJson.success && reqDetailsJson.data) {
+                                if (Array.isArray(reqDetailsJson.data.items)) {
+                                    localTItems = localTItems.concat(reqDetailsJson.data.items);
+                                }
+                                if (Array.isArray(reqDetailsJson.data.distributions)) {
+                                    localTDists = localTDists.concat(reqDetailsJson.data.distributions);
+                                }
+                            }
+                        } catch (err) {
+                            console.error(`Error syncing Transport Request ${req.id} details:`, err);
+                        }
+                    }
+                    localStorage.setItem('semco_transport_items', JSON.stringify(localTItems));
+                    localStorage.setItem('semco_transport_distributions', JSON.stringify(localTDists));
+                }
+
+                // 5. Sync Submissions & Quotes
+                const submissionsRes = await fetch(`${API_URL}/submissions`);
+                const submissionsJson = await submissionsRes.json();
+                if (submissionsJson.success && Array.isArray(submissionsJson.data)) {
+                    localStorage.setItem('semco_quotes', JSON.stringify(submissionsJson.data));
+                }
+
+                // 6. Sync Audit Trail
+                const auditRes = await fetch(`${API_URL}/audit-trail`);
+                const auditJson = await auditRes.json();
+                if (auditJson.success && Array.isArray(auditJson.data)) {
+                    localStorage.setItem('semco_audits', JSON.stringify(auditJson.data));
+                }
+
+                // 7. Sync Notifications
+                const notifRes = await fetch(`${API_URL}/notifications`);
+                const notifJson = await notifRes.json();
+                if (notifJson.success && Array.isArray(notifJson.data)) {
+                    localStorage.setItem('semco_notifications', JSON.stringify(notifJson.data));
+                }
+            } catch (err) {
+                console.warn("[Sync] Background sync check failed:", err);
+            }
+        }
+
+        // Dynamically refresh the currently active tab view to display updated backend state in real-time
+        async function refreshActiveView() {
+            // Skip refreshing if user is currently typing in an input element to preserve cursor focus/state
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+                return;
+            }
+
+            const activePanel = document.querySelector('.tab-panel.active') || document.querySelector('.tab-pane.active') || document.querySelector('.tab-content > .active');
+            if (!activePanel) return;
+            const targetId = activePanel.id;
+
+            try {
+                if (targetId === 'panel-dashboard') refreshDashboardCharts();
+                else if (targetId === 'panel-vendors') refreshVendorsTable();
+                else if (targetId === 'panel-rfq-tracking') await refreshRFQTrackingGrid();
+                else if (targetId === 'panel-comparative') refreshComparativeSelectors();
+                else if (targetId === 'panel-audit') refreshAuditLogs();
+                else if (targetId === 'panel-vendor-dashboard') refreshVendorDashboard();
+                else if (targetId === 'panel-all-submissions') refreshAllSubmissions();
+                else if (targetId === 'panel-transporter-dashboard') refreshTransporterDashboard();
+                else if (targetId === 'panel-transporters') {
+                    const activeTransTab = document.querySelector('#transporterTabs .nav-link.active');
+                    if (activeTransTab) {
+                        if (activeTransTab.id === 't-directory-tab') refreshTransportersView();
+                        else if (activeTransTab.id === 't-tracking-tab') refreshTransportTrackingDashboard();
+                        else if (activeTransTab.id === 't-comparative-tab') refreshTransportComparativeSelectors();
+                        else if (activeTransTab.id === 't-quotes-tab') refreshTransportSubmittedQuotes();
+                    } else {
+                        refreshTransportersView();
+                    }
+                }
+                else if (targetId === 'panel-master-list') {
+                    const masterActiveTab = document.querySelector('#masterListTabs .nav-link.active');
+                    if (masterActiveTab) {
+                        if (masterActiveTab.id === 'm-vendor-tab') refreshMasterListTab('vendor');
+                        else if (masterActiveTab.id === 'm-transporter-tab') refreshMasterListTab('transporter');
+                    } else {
+                        refreshMasterListTab('vendor');
+                    }
+                }
+            } catch (err) {
+                console.warn("[Sync UI] Error auto-updating active view:", err);
+            }
+        }
+
+        // Periodic background data sync every 10 seconds
+        setInterval(async () => {
+            if (serverMode) {
+                await syncLocalAndServerData();
+                await refreshActiveView();
+            }
+        }, 10000);
+
         function initLocalStorage() {
             // One-time check to wipe any old browser-cached dummy data
-            if (!localStorage.getItem('semco_db_cleared_v5')) {
+            if (!localStorage.getItem('semco_db_cleared_v6')) {
                 localStorage.removeItem('semco_vendors');
                 localStorage.removeItem('semco_rfqs');
                 localStorage.removeItem('semco_items');
@@ -4671,7 +4863,7 @@
                 localStorage.removeItem('semco_quotes');
                 localStorage.removeItem('semco_audits');
                 localStorage.removeItem('semco_notifications');
-                localStorage.setItem('semco_db_cleared_v5', 'true');
+                localStorage.setItem('semco_db_cleared_v6', 'true');
             }
 
             if (!localStorage.getItem('semco_vendors')) localStorage.setItem('semco_vendors', JSON.stringify(defaultVendors));
@@ -5173,6 +5365,12 @@
         });
 
         async function switchTab(targetId, token = null) {
+            // Persist active tab selection to keep state across page refreshes
+            const isDirectTokenLink = token || targetId === 'panel-vendor-portal' || targetId === 'panel-transporter-portal';
+            if (!isDirectTokenLink) {
+                localStorage.setItem('semco_active_tab', targetId);
+            }
+
             // Clear any active portal timers when switching away
             if (targetId !== 'panel-vendor-portal') {
                 if (vendorPortalTimerInterval) {
@@ -5401,12 +5599,32 @@
             
             // Only switch to default dashboards if we are not loading a direct token portal link
             if (!isDirectTokenLink) {
-                if (currentRole === 'Vendor') {
-                    await switchTab('panel-vendor-dashboard');
-                } else if (currentRole === 'Transporter') {
-                    await switchTab('panel-transporter-dashboard');
+                const savedTab = localStorage.getItem('semco_active_tab');
+                if (savedTab && document.getElementById(savedTab)) {
+                    let isAllowed = true;
+                    if (currentRole === 'Vendor' && savedTab !== 'panel-vendor-dashboard') isAllowed = false;
+                    else if (currentRole === 'Transporter' && savedTab !== 'panel-transporter-dashboard') isAllowed = false;
+                    else if (currentRole === 'Procurement Admin' && (savedTab === 'panel-vendor-dashboard' || savedTab === 'panel-transporter-dashboard')) isAllowed = false;
+
+                    if (isAllowed) {
+                        await switchTab(savedTab);
+                    } else {
+                        if (currentRole === 'Vendor') {
+                            await switchTab('panel-vendor-dashboard');
+                        } else if (currentRole === 'Transporter') {
+                            await switchTab('panel-transporter-dashboard');
+                        } else {
+                            await switchTab('panel-dashboard');
+                        }
+                    }
                 } else {
-                    await switchTab('panel-dashboard');
+                    if (currentRole === 'Vendor') {
+                        await switchTab('panel-vendor-dashboard');
+                    } else if (currentRole === 'Transporter') {
+                        await switchTab('panel-transporter-dashboard');
+                    } else {
+                        await switchTab('panel-dashboard');
+                    }
                 }
             }
             
@@ -6641,7 +6859,7 @@
         async function refreshAllSubmissions() {
             const tbody = document.getElementById('submissions-explorer-tbody');
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="13" class="text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading quotations...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Loading quotations...</td></tr>`;
             }
 
             try {
@@ -6695,7 +6913,6 @@
                                 transport_loading: dist.transport_loading || 0,
                                 transport_other: dist.transport_other || 0,
                                 submitted_at: dist.submitted_at || '',
-                                sent_at: dist.sent_at || '',
                                 payment_terms: dist.payment_terms || ''
                             });
                         }
@@ -6709,7 +6926,7 @@
             } catch (err) {
                 console.error("Error loading all submissions:", err);
                 if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="13" class="text-danger py-4"><i class="fa-solid fa-triangle-exclamation me-2"></i> Failed to load submissions: ${err.message}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="16" class="text-danger py-4"><i class="fa-solid fa-triangle-exclamation me-2"></i> Failed to load submissions: ${err.message}</td></tr>`;
                 }
             }
         }
@@ -6754,11 +6971,7 @@
 
             // Sort data
             filtered.sort((a, b) => {
-                if (sortVal === 'sent-desc') {
-                    return new Date(b.sent_at || 0) - new Date(a.sent_at || 0);
-                } else if (sortVal === 'sent-asc') {
-                    return new Date(a.sent_at || 0) - new Date(b.sent_at || 0);
-                } else if (sortVal === 'vendor-asc') {
+                if (sortVal === 'vendor-asc') {
                     return (a.vendor_name || '').localeCompare(b.vendor_name || '');
                 } else if (sortVal === 'vendor-desc') {
                     return (b.vendor_name || '').localeCompare(a.vendor_name || '');
@@ -6781,7 +6994,7 @@
             let totalValue = 0;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="15" class="text-muted py-4">No matching quotations found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="16" class="text-muted py-4">No matching quotations found.</td></tr>`;
             } else {
                 filtered.forEach(item => {
                     const qty = parseFloat(item.quantity) || 0;
@@ -6816,6 +7029,7 @@
                     tr.innerHTML = `
                         <td class="text-primary fw-bold">${item.rfq_number}</td>
                         <td class="fw-semibold text-dark text-start">${item.project_name}</td>
+                        <td class="fw-bold text-secondary-emphasis"><a href="#" onclick="viewVendorQuotations('${item.vendor_id}', '${item.vendor_name.replace(/'/g, "\\'")}'); return false;">${item.vendor_name}</a></td>
                         <td class="fw-bold">${item.moc}</td>
                         <td class="text-start">${item.description}</td>
                         <td>${item.make || '-'}</td>
@@ -8061,7 +8275,7 @@
                 const json = await res.json();
                 if (!json.success) return alert(json.message);
             } else {
-                const vendors = JSON.parse(localStorage.getItem('semco_vendors')) || [];
+                const vendors = JSON.parse(localStorage.getItem('semco_vendors'));
                 const id = 'VND' + String(Date.now()).slice(-3);
                 vendors.push({ id, ...body });
                 localStorage.setItem('semco_vendors', JSON.stringify(vendors));
@@ -8675,6 +8889,9 @@
             // Reset Excel variables and UI indicators
             currentEditingRfqExcelFilename = "";
             currentEditingRfqExcelPath = "";
+            currentSelectedExcelFile = null;
+            currentSelectedExcelBase64 = null;
+            currentSelectedExcelParsedSheets = [];
             const fileInput = document.getElementById('rfq-excel-file');
             if (fileInput) {
                 fileInput.value = '';
@@ -8883,7 +9100,7 @@
             const file = event.target.files[0];
             if (!file) return;
             // Store reference for upload after save
-            event.target._lastUploadedFile = file;
+            currentSelectedExcelFile = file;
 
             currentEditingRfqExcelFilename = file.name;
             currentEditingRfqExcelPath = ""; // reset path since it's a new upload
@@ -8897,7 +9114,7 @@
             // Get Base64 of the file for offline preview download
             const b64Reader = new FileReader();
             b64Reader.onload = function(e) {
-                event.target._lastBase64 = e.target.result;
+                currentSelectedExcelBase64 = e.target.result;
             };
             b64Reader.readAsDataURL(file);
 
@@ -8922,7 +9139,7 @@
                             parsedSheets.push({ name: sheetName, headers, rows });
                         }
                     });
-                    event.target._lastParsedSheets = parsedSheets;
+                    currentSelectedExcelParsedSheets = parsedSheets;
 
                     let targetSheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'summary' || name.toLowerCase() === 'requirements');
                     if (!targetSheetName) {
@@ -9069,15 +9286,13 @@
                 rfqNum = json.rfq_number;
 
                 // If an Excel file was selected, upload it and attach to this RFQ
-                const excelFileInput = document.getElementById('rfq-excel-file');
-                const excelFile = excelFileInput?._lastUploadedFile;
-                if (excelFile) {
+                if (currentSelectedExcelFile) {
                     try {
                         const fd = new FormData();
-                        fd.append('file', excelFile);
+                        fd.append('file', currentSelectedExcelFile);
                         await fetch(`${API_URL}/rfqs/${rfqId}/attach-excel`, { method: 'POST', body: fd });
                     } catch (_) { /* non-critical, continue */ }
-                    excelFileInput._lastUploadedFile = null;
+                    currentSelectedExcelFile = null;
                 }
             } else {
                 const rfqs = JSON.parse(localStorage.getItem('semco_rfqs')) || [];
@@ -9086,8 +9301,7 @@
                 rfqId = 'rfq_' + Date.now();
                 rfqNum = `RFQ-2026-${String(rfqs.length + 1).padStart(3, '0')}`;
 
-                const excelFileInput = document.getElementById('rfq-excel-file');
-                const excelFile = excelFileInput?._lastUploadedFile;
+                const excelFile = currentSelectedExcelFile;
                 const excelFilename = excelFile ? excelFile.name : '';
                 const excelPath = excelFile ? 'local_offline_path' : '';
 
@@ -9095,11 +9309,11 @@
                     const previews = JSON.parse(localStorage.getItem('semco_rfq_excel_previews')) || {};
                     previews[rfqId] = {
                         filename: excelFilename,
-                        base64: excelFileInput._lastBase64,
-                        sheets: excelFileInput._lastParsedSheets || []
+                        base64: currentSelectedExcelBase64,
+                        sheets: currentSelectedExcelParsedSheets || []
                     };
                     localStorage.setItem('semco_rfq_excel_previews', JSON.stringify(previews));
-                    excelFileInput._lastUploadedFile = null;
+                    currentSelectedExcelFile = null;
                 }
 
                 rfqs.push({
@@ -9256,15 +9470,13 @@
                 rfqNum = json.rfq_number;
 
                 // If an Excel file was selected, upload it and attach to this RFQ
-                const excelFileInputLaunch = document.getElementById('rfq-excel-file');
-                const excelFileLaunch = excelFileInputLaunch?._lastUploadedFile;
-                if (excelFileLaunch) {
+                if (currentSelectedExcelFile) {
                     try {
                         const fd = new FormData();
-                        fd.append('file', excelFileLaunch);
+                        fd.append('file', currentSelectedExcelFile);
                         await fetch(`${API_URL}/rfqs/${rfqId}/attach-excel`, { method: 'POST', body: fd });
                     } catch (_) { /* non-critical */ }
-                    excelFileInputLaunch._lastUploadedFile = null;
+                    currentSelectedExcelFile = null;
                 }
             } else {
                 const rfqs = JSON.parse(localStorage.getItem('semco_rfqs'));
@@ -9273,8 +9485,7 @@
                 rfqId = 'rfq_' + Date.now();
                 rfqNum = `RFQ-2026-${String(rfqs.length + 1).padStart(3, '0')}`;
 
-                const excelFileInputLaunch = document.getElementById('rfq-excel-file');
-                const excelFileLaunch = excelFileInputLaunch?._lastUploadedFile;
+                const excelFileLaunch = currentSelectedExcelFile;
                 const excelFilenameLaunch = excelFileLaunch ? excelFileLaunch.name : '';
                 const excelPathLaunch = excelFileLaunch ? 'local_offline_path' : '';
 
@@ -9282,11 +9493,11 @@
                     const previews = JSON.parse(localStorage.getItem('semco_rfq_excel_previews')) || {};
                     previews[rfqId] = {
                         filename: excelFilenameLaunch,
-                        base64: excelFileInputLaunch._lastBase64,
-                        sheets: excelFileInputLaunch._lastParsedSheets || []
+                        base64: currentSelectedExcelBase64,
+                        sheets: currentSelectedExcelParsedSheets || []
                     };
                     localStorage.setItem('semco_rfq_excel_previews', JSON.stringify(previews));
-                    excelFileInputLaunch._lastUploadedFile = null;
+                    currentSelectedExcelFile = null;
                 }
 
                 rfqs.push({
@@ -9390,8 +9601,20 @@
             triggerInAppAlert('RFQ Dispatched', `RFQ ${rfqNum} successfully sent to ${vendorIds.length} vendors.`);
             alert(`One-Click Distribution Complete!\n\nSecure access links generated and professional HTML emails dispatched via SendGrid to:\n\n` + sentList.map(item => `- ${item}`).join('\n'));
             
+            // Clear input fields and reset form
+            const form = document.getElementById('rfq-create-form');
+            if (form) form.reset();
+            const itemsTbody = document.getElementById('rfq-items-tbody');
+            if (itemsTbody) itemsTbody.innerHTML = '';
+            uploadedCustomHeaders = null;
+            uploadedCustomRows = null;
+            currentEditingRfqExcelFilename = '';
+            currentEditingRfqExcelPath = '';
+
             // Navigate to Tracking
             document.querySelector('[data-target="panel-rfq-tracking"]').click();
+            // Explicitly force tracking grid reload to show fresh "Sent" state immediately
+            await refreshRFQTrackingGrid();
         }
 
         // ========== RFQ LIFECYCLE TRACKING (MODULE 5 & 6) ==========
@@ -9802,6 +10025,9 @@
                 fileInput.value = '';
                 fileInput._lastUploadedFile = null;
             }
+            currentSelectedExcelFile = null;
+            currentSelectedExcelBase64 = null;
+            currentSelectedExcelParsedSheets = [];
 
             const tbody = document.getElementById('rfq-items-tbody');
             tbody.innerHTML = '';
@@ -10107,6 +10333,9 @@
 
             // Set current vendor ID (backend verify already validated existence & archived status)
             currentVendorId = details.vendor.vendor_id || details.vendor.vendorId || details.vendor.id;
+
+            // Refresh sidebar to list active RFQs for this vendor
+            await renderSidebar();
 
             // Populate Portal UI
             document.getElementById('vendor-portal-rfq-num').textContent = details.rfq.rfq_number;
@@ -10962,9 +11191,16 @@
                     }
                 }
                 await renderSidebar();
+                // Switch to vendor dashboard — switchTab fires a non-awaited refreshVendorDashboard internally
                 await switchTab('panel-vendor-dashboard');
-                // Explicitly await the dashboard refresh to guarantee the new bid appears
+                // Wait a tick for switchTab's internal refresh to settle, then do one authoritative refresh
+                await new Promise(resolve => setTimeout(resolve, 80));
                 await refreshVendorDashboard();
+                // Scroll submitted bids table into view so user immediately sees their bid
+                const submittedSection = document.getElementById('vendor-dashboard-submitted-tbody');
+                if (submittedSection) {
+                    submittedSection.closest('table')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
             } else {
                 alert("Draft quotes saved successfully.");
                 simulateVendorPortalTokenAccess(currentToken);
@@ -11027,6 +11263,13 @@
                         avg_lead_time: 0,
                         item_count: 0,
                         final_cost: d.final_cost || 0,
+                        cgst_applicable: d.cgst_applicable || 0,
+                        sgst_applicable: d.sgst_applicable || 0,
+                        transport_included: d.transport_included || 0,
+                        transport_packaging: d.transport_packaging || 0,
+                        transport_freight: d.transport_freight || 0,
+                        transport_loading: d.transport_loading || 0,
+                        transport_other: d.transport_other || 0,
                         payment_terms: d.payment_terms || ''
                     };
                 });
@@ -11043,35 +11286,42 @@
                     });
                 });
 
+                const getInclusiveCost = (v) => {
+                    const base = v.total_value || 0;
+                    const cgst = (v.cgst_applicable === 1 || v.cgst_applicable === true) ? (base * 0.09) : 0;
+                    const sgst = (v.sgst_applicable === 1 || v.sgst_applicable === true) ? (base * 0.09) : 0;
+                    const transportTotal = (v.transport_included === 1 || v.transport_included === true) ? 0 :
+                        ((v.transport_packaging || 0) + (v.transport_freight || 0) + (v.transport_loading || 0) + (v.transport_other || 0));
+                    return base + cgst + sgst + transportTotal;
+                };
+
                 const sortedRanks = Object.values(vendorTotals)
                     .map(v => {
                         if (v.item_count > 0) v.avg_lead_time = Math.round(v.avg_lead_time / v.item_count);
-                        v.inclusive_cost = v.final_cost > 0 ? v.final_cost : v.total_value;
+                        v.final_cost = getInclusiveCost(v);
                         return v;
                     })
-                    .filter(v => v.total_value > 0 || v.final_cost > 0)
-                    .sort((a,b) => a.inclusive_cost - b.inclusive_cost);
+                    .filter(v => v.total_value > 0)
+                    .sort((a,b) => a.final_cost - b.final_cost);
 
                 const rankings = sortedRanks.map((v, idx) => {
-                    const diff = idx === 0 ? 0 : (((v.inclusive_cost - sortedRanks[0].inclusive_cost) / sortedRanks[0].inclusive_cost) * 100);
-                    const dist = rfqDetails.distributions.find(d => d.vendor_id === v.vendor_id) || {};
+                    const diff = idx === 0 ? 0 : (((v.final_cost - sortedRanks[0].final_cost) / sortedRanks[0].final_cost) * 100);
                     return {
                         rank: idx + 1,
                         vendor_id: v.vendor_id,
                         vendor: v.vendor_name,
                         total_rate: v.total_value,
-                        inclusive_cost: v.inclusive_cost,
                         lead_time: v.avg_lead_time,
                         difference: diff.toFixed(1) + '%',
                         preferred: v.preferred,
                         final_cost: v.final_cost,
-                        cgst_applicable: dist.cgst_applicable || 0,
-                        sgst_applicable: dist.sgst_applicable || 0,
-                        transport_included: dist.transport_included || 0,
-                        transport_packaging: dist.transport_packaging || 0,
-                        transport_freight: dist.transport_freight || 0,
-                        transport_loading: dist.transport_loading || 0,
-                        transport_other: dist.transport_other || 0,
+                        cgst_applicable: v.cgst_applicable || 0,
+                        sgst_applicable: v.sgst_applicable || 0,
+                        transport_included: v.transport_included || 0,
+                        transport_packaging: v.transport_packaging || 0,
+                        transport_freight: v.transport_freight || 0,
+                        transport_loading: v.transport_loading || 0,
+                        transport_other: v.transport_other || 0,
                         payment_terms: v.payment_terms || ''
                     };
                 });
@@ -11083,11 +11333,11 @@
 
                 if (rankings.length > 0) {
                     winningVendor = rankings[0].vendor;
-                    winningValue = rankings[0].inclusive_cost;
+                    winningValue = rankings[0].final_cost;
                     if (rankings.length > 1) {
-                        const avgQuote = rankings.reduce((s, r)=>s + r.inclusive_cost, 0) / rankings.length;
+                        const avgQuote = rankings.reduce((s, r)=>s + r.final_cost, 0) / rankings.length;
                         savings = Math.max(0, avgQuote - winningValue);
-                        advantage = avgQuote > 0 ? (((avgQuote - winningValue) / avgQuote) * 100) : 0;
+                        advantage = ((avgQuote - winningValue) / avgQuote) * 100;
                     }
                 }
 
@@ -11285,13 +11535,47 @@
             // Calculate Rankings & savings
             const vendorTotals = {};
             pooledColumns.forEach(col => {
+                let final_cost = 0;
+                let cgst_applicable = 0;
+                let sgst_applicable = 0;
+                let transport_included = 0;
+                let transport_packaging = 0;
+                let transport_freight = 0;
+                let transport_loading = 0;
+                let transport_other = 0;
+                let payment_terms = '';
+                
+                allRFQData.forEach(data => {
+                    const r = (data.rankings || []).find(rank => rank.vendor_id === col.vendor_id);
+                    if (r) {
+                        final_cost += parseFloat(r.final_cost) || 0;
+                        cgst_applicable = cgst_applicable || r.cgst_applicable || 0;
+                        sgst_applicable = sgst_applicable || r.sgst_applicable || 0;
+                        transport_included = r.transport_included || 0;
+                        transport_packaging += parseFloat(r.transport_packaging) || 0;
+                        transport_freight += parseFloat(r.transport_freight) || 0;
+                        transport_loading += parseFloat(r.transport_loading) || 0;
+                        transport_other += parseFloat(r.transport_other) || 0;
+                        if (!payment_terms) payment_terms = r.payment_terms || '';
+                    }
+                });
+
                 vendorTotals[col.vendor_id] = {
                     vendor_id: col.vendor_id,
                     vendor_name: col.vendor_name,
                     total_value: 0,
                     avg_lead_time: 0,
                     item_count: 0,
-                    quoted_all: true
+                    quoted_all: true,
+                    final_cost,
+                    cgst_applicable,
+                    sgst_applicable,
+                    transport_included,
+                    transport_packaging,
+                    transport_freight,
+                    transport_loading,
+                    transport_other,
+                    payment_terms
                 };
             });
 
@@ -11308,18 +11592,28 @@
                 });
             });
 
+            const getInclusiveCost = (v) => {
+                const base = v.total_value || 0;
+                const cgst = (v.cgst_applicable === 1 || v.cgst_applicable === true) ? (base * 0.09) : 0;
+                const sgst = (v.sgst_applicable === 1 || v.sgst_applicable === true) ? (base * 0.09) : 0;
+                const transportTotal = (v.transport_included === 1 || v.transport_included === true) ? 0 :
+                    ((v.transport_packaging || 0) + (v.transport_freight || 0) + (v.transport_loading || 0) + (v.transport_other || 0));
+                return base + cgst + sgst + transportTotal;
+            };
+
             const sortedRanks = Object.values(vendorTotals)
                 .map(v => {
                     if (v.item_count > 0) {
                         v.avg_lead_time = Math.round(v.avg_lead_time / v.item_count);
                     }
+                    v.final_cost = getInclusiveCost(v);
                     return v;
                 })
                 .filter(v => v.total_value > 0)
-                .sort((a, b) => a.total_value - b.total_value);
+                .sort((a, b) => a.final_cost - b.final_cost);
 
             const pooledRankings = sortedRanks.map((v, idx) => {
-                const diff = idx === 0 ? 0 : (((v.total_value - sortedRanks[0].total_value) / sortedRanks[0].total_value) * 100);
+                const diff = idx === 0 ? 0 : (((v.final_cost - sortedRanks[0].final_cost) / sortedRanks[0].final_cost) * 100);
                 return {
                     rank: idx + 1,
                     vendor_id: v.vendor_id,
@@ -11328,7 +11622,16 @@
                     lead_time: v.avg_lead_time,
                     difference: diff.toFixed(1) + '%',
                     preferred: false,
-                    quoted_all: v.quoted_all
+                    quoted_all: v.quoted_all,
+                    final_cost: v.final_cost,
+                    cgst_applicable: v.cgst_applicable,
+                    sgst_applicable: v.sgst_applicable,
+                    transport_included: v.transport_included,
+                    transport_packaging: v.transport_packaging,
+                    transport_freight: v.transport_freight,
+                    transport_loading: v.transport_loading,
+                    transport_other: v.transport_other,
+                    payment_terms: v.payment_terms
                 };
             });
 
@@ -11345,9 +11648,9 @@
 
             if (pooledRankings.length > 0) {
                 winningVendor = pooledRankings[0].vendor;
-                winningValue = pooledRankings[0].total_rate;
+                winningValue = pooledRankings[0].final_cost;
                 if (pooledRankings.length > 1) {
-                    const avgQuote = pooledRankings.reduce((s, r) => s + r.total_rate, 0) / pooledRankings.length;
+                    const avgQuote = pooledRankings.reduce((s, r) => s + r.final_cost, 0) / pooledRankings.length;
                     savings = Math.max(0, avgQuote - winningValue);
                     advantage = ((avgQuote - winningValue) / avgQuote) * 100;
                 }
@@ -11448,55 +11751,47 @@
 
             pooledData.rankings.forEach(r => {
                 const tr = document.createElement('tr');
-
-                // All-inclusive cost (used for ranking)
-                const inclusiveCost = r.inclusive_cost > 0 ? r.inclusive_cost : (r.final_cost > 0 ? r.final_cost : r.total_rate);
-                const inclusiveCostText = `<span class="fw-bold ${r.rank === 1 ? 'text-success' : 'text-primary'}">₹${inclusiveCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
-
-                // Base item total (ex-tax)
-                const baseTotal = r.total_rate > 0 ? `₹${r.total_rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '<span class="text-muted">—</span>';
-
-                // GST / Tax badge
-                const taxParts = [];
-                if (r.cgst_applicable) taxParts.push('CGST');
-                if (r.sgst_applicable) taxParts.push('SGST');
-                const taxBadge = taxParts.length > 0
-                    ? `<span class="badge bg-primary-subtle text-primary fs-9 d-block mt-1"><i class="fa-solid fa-percent me-1"></i>Taxes: ${taxParts.join(' + ')} Applicable</span>`
-                    : `<span class="badge bg-secondary-subtle text-secondary fs-9 d-block mt-1">Taxes: Not Applicable</span>`;
-
-                // Transport badge
+                const finalCostText = (r.final_cost && r.final_cost > 0) ? `₹${r.final_cost.toFixed(2)}` : '<span class="text-muted">N/A</span>';
+                
                 const transportTotal = (r.transport_packaging || 0) + (r.transport_freight || 0) + (r.transport_loading || 0) + (r.transport_other || 0);
                 const transportText = r.transport_included === 1
-                    ? `<span class="badge bg-success-subtle text-success fs-9 d-block mt-1"><i class="fa-solid fa-truck me-1"></i>Transport: Included (P&F ₹${r.transport_packaging || 0}, Frt ₹${r.transport_freight || 0}, Load ₹${r.transport_loading || 0}, Oth ₹${r.transport_other || 0})</span>`
-                    : transportTotal > 0
-                        ? `<span class="badge bg-warning-subtle text-warning fs-9 d-block mt-1"><i class="fa-solid fa-truck me-1"></i>Transport: Excluded (+₹${transportTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })})</span>`
-                        : `<span class="badge bg-secondary-subtle text-secondary fs-9 d-block mt-1"><i class="fa-solid fa-truck me-1"></i>Transport: Not Specified</span>`;
+                    ? `<span class="badge bg-success-subtle text-success fs-9 d-block mt-1">Transport: Included (Breakup: P&F ₹${r.transport_packaging || 0}, Frt ₹${r.transport_freight || 0}, Load ₹${r.transport_loading || 0}, Oth ₹${r.transport_other || 0})</span>`
+                    : `<span class="badge bg-warning-subtle text-warning fs-9 d-block mt-1">Transport: Excluded (+₹${transportTotal.toFixed(2)}) (Breakup: P&F ₹${r.transport_packaging || 0}, Frt ₹${r.transport_freight || 0}, Load ₹${r.transport_loading || 0}, Oth ₹${r.transport_other || 0})</span>`;
+
+                let gstText = '';
+                if (r.cgst_applicable && r.sgst_applicable) {
+                    gstText = `<span class="badge bg-success-subtle text-success fs-9 d-block mt-1">GST: Applied (18% CGST+SGST)</span>`;
+                } else if (r.cgst_applicable) {
+                    gstText = `<span class="badge bg-info-subtle text-info fs-9 d-block mt-1">GST: Applied (9% CGST)</span>`;
+                } else if (r.sgst_applicable) {
+                    gstText = `<span class="badge bg-info-subtle text-info fs-9 d-block mt-1">GST: Applied (9% SGST)</span>`;
+                } else {
+                    gstText = `<span class="badge bg-secondary-subtle text-secondary fs-9 d-block mt-1">GST: Not Applicable</span>`;
+                }
 
                 const paymentTermsText = r.payment_terms
-                    ? `<span class="badge bg-info-subtle text-info fs-9 d-block mt-1" style="white-space:normal;text-align:left;"><i class="fa-solid fa-credit-card me-1"></i>Payment: ${r.payment_terms}</span>`
+                    ? `<span class="badge bg-info-subtle text-info fs-9 d-block mt-1" style="white-space: normal; text-align: left;"><i class="fa-solid fa-credit-card me-1"></i>Payment Terms: ${r.payment_terms}</span>`
                     : '';
 
                 tr.innerHTML = `
                     <td><span class="badge ${r.rank === 1 ? 'bg-success' : 'bg-secondary'} px-2 py-1">${r.rank === 1 ? 'L1 Winner' : 'L' + r.rank}</span></td>
-                    <td class="fw-bold text-start">
+                    <td class="fw-bold">
                         ${r.vendor} ${r.quoted_all ? '' : '<span class="text-muted fs-9 fw-normal">(Partial)</span>'}
-                        ${taxBadge}
                         ${transportText}
+                        ${gstText}
                         ${paymentTermsText}
                     </td>
-                    <td class="text-center">${inclusiveCostText}</td>
-                    <td class="text-center text-muted">${baseTotal}</td>
+                    <td class="text-primary fw-bold">₹${r.total_rate.toFixed(2)}</td>
+                    <td class="text-info fw-bold">${finalCostText}</td>
                     <td>${r.lead_time} Days</td>
-                    <td class="${r.rank === 1 ? 'text-success' : 'text-danger'} fw-semibold">${r.difference}</td>
                 `;
                 rankTbody.appendChild(tr);
             });
 
             // Update Winner Card
             if (pooledData.rankings.length > 0) {
-                // winner.value is now all-inclusive cost
                 document.getElementById('winner-vendor-name').textContent = pooledData.winner.vendor;
-                document.getElementById('winner-quote-value').textContent = '₹' + parseFloat(pooledData.winner.value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById('winner-quote-value').textContent = '₹' + parseFloat(pooledData.winner.value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
                 document.getElementById('winner-savings-value').textContent = '₹' + parseFloat(pooledData.winner.savings).toLocaleString('en-IN', { maximumFractionDigits: 2 });
                 document.getElementById('winner-advantage-pct').textContent = pooledData.winner.advantage;
                 winnerRow.classList.remove('d-none');
@@ -11542,8 +11837,7 @@
             const accentOrange = style.getPropertyValue('--accent-orange').trim() || '#f58d51';
 
             const labels = pooledData.rankings.map(r => r.vendor);
-            // Chart uses all-inclusive cost for visual comparison
-            const dataValues = pooledData.rankings.map(r => r.inclusive_cost > 0 ? r.inclusive_cost : r.total_rate);
+            const dataValues = pooledData.rankings.map(r => r.total_rate);
 
             const bgColors = pooledData.rankings.map((r, idx) => {
                 if (idx === 0) return accentGreen;
@@ -11571,7 +11865,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return 'All-Inclusive Cost: ₹' + context.raw.toLocaleString('en-IN');
+                                    return 'Total Quote: ₹' + context.raw.toLocaleString('en-IN');
                                 }
                             }
                         }
@@ -11612,15 +11906,13 @@
             const l1 = rankings[0];
             const l2 = rankings[1] || null;
 
-            // 1. Commercial Analysis (all-inclusive costs)
-            const l1IncCost = l1.inclusive_cost > 0 ? l1.inclusive_cost : l1.total_rate;
-            let comm = `<b>L1 Bidder</b> is <b>${l1.vendor}</b> with an <b>all-inclusive cost of ₹${l1IncCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b> (inclusive of GST, taxes and transport charges). `;
+            // 1. Commercial Analysis
+            let comm = `<b>L1 Bidder</b> is <b>${l1.vendor}</b> with a combined quote of <b>₹${l1.total_rate.toLocaleString('en-IN')}</b> across the selected items. `;
             if (l2) {
-                const l2IncCost = l2.inclusive_cost > 0 ? l2.inclusive_cost : l2.total_rate;
                 const savingsVal = parseFloat(pooledData.winner.savings);
                 const savingsPct = parseFloat(pooledData.winner.advantage);
-                comm += `This all-inclusive quote is <b>₹${savingsVal.toLocaleString('en-IN')} (${savingsPct}%)</b> lower than the average all-inclusive quote. `;
-                comm += `Comparing to the L2 runner-up (<b>${l2.vendor}</b> at ₹${l2IncCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}), awarding to L1 yields a direct cost reduction of <b>₹${(l2IncCost - l1IncCost).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</b>.`;
+                comm += `This quote is <b>₹${savingsVal.toLocaleString('en-IN')} (${savingsPct}%)</b> lower than the average quote. `;
+                comm += `Comparing to the L2 runner-up (<b>${l2.vendor}</b> at ₹${l2.total_rate.toLocaleString('en-IN')}), awarding to L1 yields a direct cost reduction of <b>₹${(l2.total_rate - l1.total_rate).toLocaleString('en-IN')}</b>.`;
             } else {
                 comm += `Currently, there are no competitor bids to calculate savings comparisons. Encourage other vendors to submit rates.`;
             }
@@ -14131,6 +14423,9 @@
             const transporter = data.transporter;
             currentTransporterId = transporter.id || null;
 
+            // Refresh sidebar to list active transporter requests for this transporter
+            await renderSidebar();
+
 
             document.getElementById('t-portal-token').value = token;
             document.getElementById('t-portal-transporter-info').textContent = `Transporter: ${transporter.name} (${transporter.id})`;
@@ -14677,9 +14972,16 @@
                             console.warn('[Post-Submit Re-verify] Could not re-verify transport token:', reVerifyErr);
                         }
                     }
+                    // Switch to transporter dashboard \u2014 switchTab fires a non-awaited refreshTransporterDashboard internally
                     await switchTab('panel-transporter-dashboard');
-                    // Explicitly await the dashboard refresh to guarantee the new bid appears
+                    // Wait a tick for switchTab's internal refresh to settle, then do one authoritative refresh
+                    await new Promise(resolve => setTimeout(resolve, 80));
                     await refreshTransporterDashboard();
+                    // Scroll submitted bids table into view so user immediately sees their bid
+                    const tSubmittedSection = document.getElementById('t-dash-submitted-tbody');
+                    if (tSubmittedSection) {
+                        tSubmittedSection.closest('table')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                 } else {
                     await switchTab('panel-transporters');
                     document.getElementById('t-tracking-tab').click();
@@ -15093,11 +15395,7 @@
 
             // Sort data
             filtered.sort((a, b) => {
-                if (sortVal === 'sent-desc') {
-                    return new Date(b.sent_at || 0) - new Date(a.sent_at || 0);
-                } else if (sortVal === 'sent-asc') {
-                    return new Date(a.sent_at || 0) - new Date(b.sent_at || 0);
-                } else if (sortVal === 'transporter-asc') {
+                if (sortVal === 'transporter-asc') {
                     return (a.transporter_name || '').localeCompare(b.transporter_name || '');
                 } else if (sortVal === 'transporter-desc') {
                     return (b.transporter_name || '').localeCompare(a.transporter_name || '');
@@ -15119,7 +15417,7 @@
             let totalSum = 0;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" class="text-center text-secondary py-3"><i class="fa-solid fa-info-circle me-1"></i> No matching submitted quotes found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="13" class="text-center text-secondary py-3"><i class="fa-solid fa-info-circle me-1"></i> No matching submitted quotes found.</td></tr>`;
                 if (countDisplay) countDisplay.textContent = '0';
                 if (sumDisplay) sumDisplay.textContent = '₹0.00';
                 return;
@@ -15141,6 +15439,12 @@
                     <tr>
                         <td class="text-primary fw-bold">
                             <a href="#" onclick="viewComparativeForRequest('${s.request_id}'); return false;" class="text-decoration-none">${s.request_number}</a>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark text-start">
+                                <a href="#" onclick="viewTransporterQuotations('${s.transporter_id}', '${s.transporter_name.replace(/'/g, "\\'")}'); return false;">${s.transporter_name}</a>
+                            </div>
+                            <div class="text-secondary fs-8 text-start">${s.transporter_email}</div>
                         </td>
                         <td>
                             <div class="text-start">${s.from_location} &rarr; ${s.to_location}</div>
