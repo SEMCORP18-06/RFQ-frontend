@@ -6427,7 +6427,6 @@
                 }
 
                 // Render Submitted / Closed Bids list table without clearing layout beforehand
-                const submittedTbody = document.getElementById('vendor-dashboard-submitted-tbody');
                 if (submittedTbody) {
                     const submittedDists = distributions.filter(d => 
                         d.status === 'Submitted' || 
@@ -14679,7 +14678,6 @@
                 }
 
                 // Render Submitted Bids table
-                const submittedTbody = document.getElementById('t-dash-submitted-tbody');
                 if (submittedTbody) {
                     submittedTbody.innerHTML = '';
                     const submittedDists = allDists.filter(d => d.status === 'Submitted' || d.status === 'Expired' || (d.expires_at && new Date() > new Date(d.expires_at) && d.status !== 'Submitted'));
