@@ -2610,7 +2610,7 @@
                             <div class="card p-3 border shadow-sm" style="background-color: var(--bg-secondary);">
                                 <label class="form-label fw-bold text-secondary mb-2"><i class="fa-solid fa-credit-card me-1"></i> Payment Terms</label>
                                 <p class="text-secondary fs-9 mb-2">Specify your payment terms & conditions for this quotation (e.g. Credit period, Advance required, etc.).</p>
-                                <textarea class="form-control form-control-sm" id="vendor-portal-payment-terms" rows="2" placeholder="e.g. 30 days credit from receipt of materials / 100% advance / 50-50 terms"></textarea>
+                                <textarea class="form-control form-control-sm" id="vendor-portal-payment-terms" rows="2" placeholder="e.g. 30 days credit from receipt of materials / 100% advance / 50-50 terms" oninput="saveVendorPortalStateLocal()"></textarea>
                             </div>
                         </div>
                     </div>
@@ -6285,6 +6285,16 @@
 
         async function refreshVendorDashboard() {
             try {
+                // Clear and show loading spinner to prevent blank flash
+                const activeTbody = document.getElementById('vendor-dashboard-rfqs-tbody');
+                const submittedTbody = document.getElementById('vendor-dashboard-submitted-tbody');
+                if (activeTbody) {
+                    activeTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>Loading active requests...</td></tr>`;
+                }
+                if (submittedTbody) {
+                    submittedTbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>Loading submitted bids...</td></tr>`;
+                }
+
                 // Fetch vendor details and distributions in parallel to minimize roundtrips
                 let vendorsList = [];
                 let distributions = [];
@@ -7910,6 +7920,8 @@
                     let transport_loading = 0.0;
                     let transport_other = 0.0;
                     let payment_terms = '';
+                    let vendor_docs = '[]';
+                    let vendor_doc_name = '';
                     
                     if (serverMode) {
                         final_cost = q.final_cost || 0;
@@ -7921,6 +7933,8 @@
                         transport_loading = q.transport_loading || 0.0;
                         transport_other = q.transport_other || 0.0;
                         payment_terms = q.payment_terms || '';
+                        vendor_docs = q.vendor_docs || '[]';
+                        vendor_doc_name = q.vendor_doc_name || '';
                     } else {
                         const dists = JSON.parse(localStorage.getItem('semco_distributions')) || [];
                         const dist = dists.find(d => d.rfq_id === q.rfq_id && d.vendor_id === q.vendor_id);
@@ -7934,6 +7948,8 @@
                             transport_loading = dist.transport_loading || 0.0;
                             transport_other = dist.transport_other || 0.0;
                             payment_terms = dist.payment_terms || '';
+                            vendor_docs = dist.vendor_docs || '[]';
+                            vendor_doc_name = dist.vendor_doc_name || '';
                         }
                     }
 
@@ -7949,6 +7965,8 @@
                         transport_loading,
                         transport_other,
                         payment_terms,
+                        vendor_docs,
+                        vendor_doc_name,
                         items: []
                     };
                 }
@@ -7958,6 +7976,21 @@
             let html = '';
             Object.keys(groups).forEach(rfqId => {
                 const group = groups[rfqId];
+                
+                let docLinksHtml = '—';
+                try {
+                    const docs = JSON.parse(group.vendor_docs || '[]');
+                    if (docs.length > 0) {
+                        docLinksHtml = docs.map(d => {
+                            const dlUrl = `${API_URL}/submissions/download-document?rfq_id=${rfqId}&vendor_id=${vendorId}&doc_name=${encodeURIComponent(d.name)}`;
+                            return `<a href="${dlUrl}" target="_blank" class="badge bg-primary text-decoration-none me-1"><i class="fa-solid fa-download me-1"></i>${d.name}</a>`;
+                        }).join('');
+                    } else if (group.vendor_doc_name) {
+                        const dlUrl = `${API_URL}/submissions/download-document?rfq_id=${rfqId}&vendor_id=${vendorId}&doc_name=${encodeURIComponent(group.vendor_doc_name)}`;
+                        docLinksHtml = `<a href="${dlUrl}" target="_blank" class="badge bg-primary text-decoration-none"><i class="fa-solid fa-download me-1"></i>${group.vendor_doc_name}</a>`;
+                    }
+                } catch (_) {}
+
                 html += `
                     <div class="card mb-4 border-secondary">
                         <div class="card-header bg-dark text-white py-2 px-3 d-flex justify-content-between align-items-center" style="background-color: #0f172a !important;">
@@ -8020,6 +8053,10 @@
                                     <div class="border-top pt-1 mt-1 fs-9">
                                         <strong><i class="fa-solid fa-credit-card me-1"></i> Payment Terms:</strong>
                                         <span class="fw-bold text-dark ms-1">${group.payment_terms || '—'}</span>
+                                    </div>
+                                    <div class="border-top pt-1 mt-1 fs-9">
+                                        <strong><i class="fa-solid fa-file-lines me-1"></i> Attached Documents:</strong>
+                                        <span class="ms-1">${docLinksHtml}</span>
                                     </div>
                                 </div>
                             </div>
@@ -10760,6 +10797,10 @@
             }
 
             tbody.innerHTML = '';
+            
+            // Check if we have locally cached unsaved draft values
+            const localDraft = window._vendorPortalDrafts ? window._vendorPortalDrafts[token] : null;
+
             details.items.forEach(item => {
                 let rowData = {};
                 if (item.custom_data) {
@@ -10783,21 +10824,25 @@
                 const tr = document.createElement('tr');
                 let trHtml = '';
                 
+                const finalRate = (localDraft && localDraft.rates[item.id] !== undefined) ? localDraft.rates[item.id] : (item.rate || '');
+                const finalLead = (localDraft && localDraft.leads[item.id] !== undefined) ? localDraft.leads[item.id] : (item.lead_time_days || '10');
+                const finalRemark = (localDraft && localDraft.remarks[item.id] !== undefined) ? localDraft.remarks[item.id] : (item.remarks || '');
+
                 headers.forEach((h, idx) => {
                     if (idx === rateHeaderIdx) {
-                        trHtml += `<td><input type="number" class="form-control form-control-sm portal-rate text-center fw-bold text-primary" style="width: 120px;" value="${item.rate || ''}" ${isLocked ? 'readonly' : ''} oninput="calculateVendorPortalTotals()" required></td>`;
+                        trHtml += `<td><input type="number" class="form-control form-control-sm portal-rate text-center fw-bold text-primary" style="width: 120px;" value="${finalRate}" ${isLocked ? 'readonly' : ''} oninput="calculateVendorPortalTotals()" required></td>`;
                     } else {
                         trHtml += `<td class="fs-8">${rowData[h] !== undefined ? rowData[h] : ''}</td>`;
                     }
                 });
 
                 if (!hasRateHeader) {
-                    trHtml += `<td><input type="number" class="form-control form-control-sm portal-rate text-center fw-bold text-primary" style="width: 120px;" value="${item.rate || ''}" ${isLocked ? 'readonly' : ''} oninput="calculateVendorPortalTotals()" required></td>`;
+                    trHtml += `<td><input type="number" class="form-control form-control-sm portal-rate text-center fw-bold text-primary" style="width: 120px;" value="${finalRate}" ${isLocked ? 'readonly' : ''} oninput="calculateVendorPortalTotals()" required></td>`;
                 }
 
                 trHtml += `
-                    <td><input type="number" class="form-control form-control-sm portal-lead text-center" style="width: 90px;" value="${item.lead_time_days || '10'}" ${isLocked ? 'readonly' : ''} required></td>
-                    <td><input type="text" class="form-control form-control-sm portal-remarks" value="${item.remarks || ''}" placeholder="Note..." ${isLocked ? 'readonly' : ''}></td>
+                    <td><input type="number" class="form-control form-control-sm portal-lead text-center" style="width: 90px;" value="${finalLead}" ${isLocked ? 'readonly' : ''} oninput="saveVendorPortalStateLocal()" required></td>
+                    <td><input type="text" class="form-control form-control-sm portal-remarks" value="${finalRemark}" placeholder="Note..." ${isLocked ? 'readonly' : ''} oninput="saveVendorPortalStateLocal()"></td>
                     <input type="hidden" class="portal-item-id" value="${item.id}">
                     <input type="hidden" class="portal-quantity-holder" data-qty="${qtyVal}">
                 `;
@@ -10808,13 +10853,13 @@
 
             const cgstCb = document.getElementById('vendor-portal-cgst-checkbox');
             const sgstCb = document.getElementById('vendor-portal-sgst-checkbox');
-            cgstCb.checked = details.vendor.cgst_applicable === 1 || details.vendor.cgst_applicable === true;
-            sgstCb.checked = details.vendor.sgst_applicable === 1 || details.vendor.sgst_applicable === true;
+            cgstCb.checked = localDraft ? localDraft.cgst : (details.vendor.cgst_applicable === 1 || details.vendor.cgst_applicable === true);
+            sgstCb.checked = localDraft ? localDraft.sgst : (details.vendor.sgst_applicable === 1 || details.vendor.sgst_applicable === true);
             cgstCb.disabled = isLocked;
             sgstCb.disabled = isLocked;
 
             // Load transport cost details
-            const transportIncluded = details.vendor.transport_included === 1 || details.vendor.transport_included === true;
+            const transportIncluded = localDraft ? localDraft.transport_included : (details.vendor.transport_included === 1 || details.vendor.transport_included === true);
             const chkIncluded = document.getElementById('transport-included-checkbox');
             const chkExcluded = document.getElementById('transport-excluded-checkbox');
             chkIncluded.checked = transportIncluded;
@@ -10828,10 +10873,10 @@
             const loadInput = document.getElementById('transport-loading-input');
             const othInput = document.getElementById('transport-other-input');
             
-            pkgInput.value = (details.vendor.transport_packaging !== undefined ? details.vendor.transport_packaging : 0.0).toFixed(2);
-            frtInput.value = (details.vendor.transport_freight !== undefined ? details.vendor.transport_freight : 0.0).toFixed(2);
-            loadInput.value = (details.vendor.transport_loading !== undefined ? details.vendor.transport_loading : 0.0).toFixed(2);
-            othInput.value = (details.vendor.transport_other !== undefined ? details.vendor.transport_other : 0.0).toFixed(2);
+            pkgInput.value = localDraft ? localDraft.transport_packaging : (details.vendor.transport_packaging !== undefined ? details.vendor.transport_packaging : 0.0).toFixed(2);
+            frtInput.value = localDraft ? localDraft.transport_freight : (details.vendor.transport_freight !== undefined ? details.vendor.transport_freight : 0.0).toFixed(2);
+            loadInput.value = localDraft ? localDraft.transport_loading : (details.vendor.transport_loading !== undefined ? details.vendor.transport_loading : 0.0).toFixed(2);
+            othInput.value = localDraft ? localDraft.transport_other : (details.vendor.transport_other !== undefined ? details.vendor.transport_other : 0.0).toFixed(2);
             
             pkgInput.readOnly = isLocked;
             frtInput.readOnly = isLocked;
@@ -11147,6 +11192,42 @@
                 chkIncluded.checked = !chkExcluded.checked;
             }
             calculateVendorPortalTotals();
+            
+            // Save current portal inputs state to local persistent cache
+            saveVendorPortalStateLocal();
+        }
+
+        function saveVendorPortalStateLocal() {
+            if (!currentToken) return;
+            const state = {
+                rates: {},
+                leads: {},
+                remarks: {},
+                payment_terms: document.getElementById('vendor-portal-payment-terms')?.value || '',
+                cgst: document.getElementById('vendor-portal-cgst-checkbox')?.checked || false,
+                sgst: document.getElementById('vendor-portal-sgst-checkbox')?.checked || false,
+                transport_included: document.getElementById('transport-included-checkbox')?.checked || false,
+                transport_packaging: document.getElementById('transport-packaging-input')?.value || '',
+                transport_freight: document.getElementById('transport-freight-input')?.value || '',
+                transport_loading: document.getElementById('transport-loading-input')?.value || '',
+                transport_other: document.getElementById('transport-other-input')?.value || ''
+            };
+            
+            const rows = document.querySelectorAll('#vendor-portal-items-tbody tr');
+            rows.forEach(r => {
+                const itemId = r.querySelector('.portal-item-id')?.value;
+                const rate = r.querySelector('.portal-rate')?.value;
+                const lead = r.querySelector('.portal-lead')?.value;
+                const remark = r.querySelector('.portal-remarks')?.value;
+                if (itemId) {
+                    state.rates[itemId] = rate;
+                    state.leads[itemId] = lead;
+                    state.remarks[itemId] = remark;
+                }
+            });
+            
+            if (!window._vendorPortalDrafts) window._vendorPortalDrafts = {};
+            window._vendorPortalDrafts[currentToken] = state;
         }
 
         function calculateVendorPortalTotals() {
@@ -14427,6 +14508,16 @@
 
         async function refreshTransporterDashboard() {
             try {
+                // Clear and show loading spinner to prevent blank flash
+                const activeTbody = document.getElementById('t-dash-requests-tbody');
+                const submittedTbody = document.getElementById('t-dash-submitted-tbody');
+                if (activeTbody) {
+                    activeTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>Loading active requests...</td></tr>`;
+                }
+                if (submittedTbody) {
+                    submittedTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>Loading submitted bids...</td></tr>`;
+                }
+
                 const transportersList = await getTransporters();
                 const t = transportersList.find(x => x.id === currentTransporterId);
 
