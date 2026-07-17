@@ -5,6 +5,7 @@
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
+            console.log('%c[SEMCO Smart RFQ] Version 2.1.2 (Parallel Sync + Non-Blocking Loader Active)', 'color: #3b82f6; font-weight: bold; font-size: 14px;');
 
             // Hide portal loader immediately if a token or active session is detected
             // (auth-overlay is already hidden by default in CSS; only shown explicitly when needed)
