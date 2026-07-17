@@ -5214,14 +5214,8 @@
                             const clockWidget = document.getElementById('header-clock');
                             if (clockWidget) clockWidget.style.setProperty('display', 'none', 'important');
 
-                            // Redirect directly to their dashboard page
-                            if (verifyData.type === 'vendor') {
-                                await switchTab('panel-vendor-dashboard');
-                            } else {
-                                await switchTab('panel-transporter-dashboard');
-                            }
-                            
-                            // Load onboarding form inside their dashboard
+                            // Redirect directly to Partner Onboarding Registration page
+                            await switchTab('panel-onboarding-registration');
                             await loadOnboardingDetails(onboardToken);
                         } catch (err) {
                             console.error('Onboarding verification error on load:', err);
@@ -16511,7 +16505,7 @@
                                     <div class="mt-4 p-3 bg-light rounded text-start mx-auto" style="max-width: 500px;">
                                         <h6 class="fw-bold text-dark"><i class="fa-solid fa-key me-2 text-primary"></i> Create Your Account</h6>
                                         <p class="text-muted fs-8 mb-2">You can now proceed to set up your password and access the SEMCO RFQ Portal.</p>
-                                        <a href="/?register=true&email=${encodeURIComponent(document.getElementById('onboard-email').value)}&type=${type}" class="btn btn-sm btn-primary w-100 fw-semibold text-center d-block">
+                                        <a href="/?register=true&email=${encodeURIComponent(email)}&type=${type}" class="btn btn-sm btn-primary w-100 fw-semibold text-center d-block">
                                             <i class="fa-solid fa-user-plus me-1"></i> Proceed to Create Account
                                         </a>
                                     </div>
